@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>글쓰기 학습터 v6 — 협력 토의 분석</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f2eb;--sf:#fffdf7;--ink:#1c1917;--ink2:#57534e;--ink3:#a8a29e;
+  --bd:#e7e3db;--red:#c0392b;--red-lt:#fdf2f1;--grn:#16a34a;--grn-lt:#f0fdf4;
+  --blu:#1d4ed8;--blu-lt:#eff6ff;--amb:#b45309;--amb-lt:#fffbeb;
+  --pur:#7c3aed;--pur-lt:#f5f3ff;--teal:#0f766e;--teal-lt:#f0fdfa;
+  --sh:0 4px 14px rgba(0,0,0,.08);--sh-lg:0 16px 40px rgba(0,0,0,.11);
+  --r:10px;--rs:7px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
+.scr{display:none}.scr.on{display:flex;flex-direction:column;min-height:100vh}
+/* LOGIN */
+#pg-login{align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(192,57,43,.1),transparent 60%),var(--bg)}
+.brand{text-align:center;margin-bottom:28px}
+.brand-ico{display:inline-flex;width:60px;height:60px;background:var(--ink);border-radius:14px;align-items:center;justify-content:center;font-size:28px;margin-bottom:10px;box-shadow:var(--sh-lg)}
+.brand h1{font-family:"Noto Serif KR",serif;font-size:24px;font-weight:700;letter-spacing:-1px}
+.brand p{color:var(--ink2);font-size:12px;margin-top:4px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:18px;padding:30px;width:100%;max-width:420px;box-shadow:var(--sh-lg)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border-radius:var(--rs);padding:3px;margin-bottom:22px;gap:2px}
+.tab{padding:8px;border:none;background:none;border-radius:6px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink3);cursor:pointer;transition:all .18s}
+.tab.on{background:var(--sf);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.fld{margin-bottom:13px}
+.fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--ink3);text-transform:uppercase;margin-bottom:5px}
+.fld input{width:100%;padding:10px 13px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--ink);background:var(--sf);outline:none;transition:border-color .18s}
+.fld input:focus{border-color:var(--red)}
+.btn-p{width:100%;padding:12px;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;background:var(--ink);color:#fff;transition:all .18s;margin-top:4px}
+.btn-p:hover{background:#2c2926;transform:translateY(-1px)}
+.note-box{background:var(--amb-lt);border:1px solid #fde68a;border-radius:var(--rs);padding:9px 12px;font-size:12px;color:var(--amb);margin-bottom:13px;line-height:1.6}
+/* TEACHER */
+#pg-teacher{background:var(--bg)}
+.t-top{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;flex-shrink:0}
+.t-top h2{font-family:"Noto Serif KR",serif;font-size:16px;font-weight:700}
+.btn-gh{padding:6px 13px;border:1.5px solid rgba(255,255,255,.3);border-radius:var(--rs);background:none;color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.btn-gh:hover{border-color:#fff}
+.t-body{max-width:1000px;margin:0 auto;padding:24px 18px;display:flex;flex-direction:column;gap:16px}
+.tc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:22px}
+.tc h3{font-family:"Noto Serif KR",serif;font-size:15px;font-weight:700;margin-bottom:3px}
+.tc-sub{color:var(--ink2);font-size:12px;margin-bottom:14px;line-height:1.6}
+.row{display:flex;gap:7px;align-items:center}
+.row input{flex:1;padding:9px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--ink);outline:none}
+.row input:focus{border-color:var(--red)}
+.btn-sm{padding:8px 14px;border:1.5px solid var(--bd);border-radius:var(--rs);background:var(--sf);font-family:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;white-space:nowrap;transition:all .18s}
+.btn-sm:hover{border-color:var(--ink);background:var(--ink);color:#fff}
+.btn-sm.red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-sm.grn{background:var(--grn);color:#fff;border-color:var(--grn)}
+.code-box{background:var(--ink);color:#fff;border-radius:var(--rs);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.code-val{font-family:"Courier New",monospace;font-size:26px;font-weight:700;letter-spacing:5px;color:#fde68a}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stog{border:1.5px solid var(--bd);border-radius:var(--rs);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
+.stog.on{border-color:var(--grn);background:var(--grn-lt)}
+.stog-l{display:flex;align-items:center;gap:7px}
+.stog-l .ico{font-size:17px}
+.stog-l strong{font-size:13px;display:block}.stog-l span{font-size:11px;color:var(--ink2)}
+.sw{position:relative;width:38px;height:21px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw-t{position:absolute;inset:0;background:var(--bd);border-radius:21px;cursor:pointer;transition:background .2s}
+.sw-t::before{content:"";position:absolute;width:13px;height:13px;top:4px;left:4px;background:#fff;border-radius:50%;transition:transform .2s}
+.sw input:checked~.sw-t{background:var(--grn)}
+.sw input:checked~.sw-t::before{transform:translateX(17px)}
+.flist{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:10px 14px;margin:8px 0;font-size:11px;line-height:2.2}
+.flist code{background:var(--grn-lt);border:1px solid #bbf7d0;color:#14532d;padding:1px 6px;border-radius:3px;font-family:"Courier New",monospace;font-size:11px}
+.dtbl{width:100%;border-collapse:collapse;font-size:12px}
+.dtbl th{padding:8px 10px;background:var(--bg);font-weight:700;color:var(--ink3);text-align:left;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--bd)}
+.dtbl td{padding:9px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.dtbl tr:hover td{background:var(--bg)}
+.bdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.b-plan{background:#e0f2fe;color:#075985}.b-outline{background:#fef9c3;color:#854d0e}
+.b-draft{background:var(--grn-lt);color:#14532d}.b-revise{background:var(--red-lt);color:#9b1c1c}
+.b-Telling{background:#dbeafe;color:#1e40af}.b-Transformation{background:#fef3c7;color:#92400e}.b-Creation{background:#dcfce7;color:#14532d}
+.dbox{display:none;padding:14px;background:var(--bg);border-top:1px solid var(--bd)}
+.dbox.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.dc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:10px}
+.dc h4{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:5px}
+.dc p{font-size:12px;line-height:1.6}
+.qi{font-size:11px;color:var(--ink2);padding:3px 0;border-bottom:1px dotted var(--bd)}
+.qi .qq{color:var(--ink);font-weight:500}.qi .qa{color:var(--ink2);font-style:italic}
+/* STUDENT */
+#pg-student{background:var(--bg)}
+.s-top{background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:52px;flex-shrink:0;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.s-logo{font-family:"Noto Serif KR",serif;font-size:15px;font-weight:700;display:flex;align-items:center;gap:5px}
+.snav-wrap{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:9px;border:1px solid var(--bd)}
+.snav{display:flex;align-items:center;gap:3px;padding:5px 11px;border:none;background:none;border-radius:7px;font-family:inherit;font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;transition:all .18s;white-space:nowrap}
+.snav.on{background:var(--sf);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.snav.done::after{content:"✓";font-size:9px;color:var(--grn);margin-left:2px}
+.s-body{display:flex;flex:1;overflow:hidden;height:calc(100vh - 52px)}
+.wcol{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.sth{padding:14px 22px 10px;background:var(--sf);border-bottom:1px solid var(--bd);flex-shrink:0}
+.sth h2{font-family:"Noto Serif KR",serif;font-size:17px;font-weight:700;margin-bottom:2px}
+.sth p{font-size:12px;color:var(--ink2)}
+.wscroll{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:13px}
+.pc{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:14px;transition:border-color .18s}
+.pc:focus-within{border-color:var(--red)}
+.pc label{display:block;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.pc input,.pc textarea{width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.7}
+.big-ta{min-height:340px;background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:18px 20px;font-family:"Noto Serif KR",serif;font-size:15px;line-height:2.1;color:var(--ink);outline:none;resize:none;transition:border-color .18s;width:100%}
+.big-ta:focus{border-color:var(--red)}
+.kl-w{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:14px 16px;display:none}
+.bot-bar{padding:11px 22px;border-top:1px solid var(--bd);background:var(--sf);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.prog{display:flex;gap:5px;align-items:center}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--bd);transition:all .3s}
+.pdot.done{background:var(--grn)}.pdot.cur{background:var(--red);width:18px;border-radius:3px}
+.bar-r{display:flex;gap:7px}
+.btn-nav{padding:8px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;border:1.5px solid var(--bd);background:var(--sf);color:var(--ink)}
+.btn-nav:hover{border-color:var(--ink)}
+.btn-nxt{background:var(--ink);color:#fff;border-color:var(--ink)}.btn-nxt:hover{background:#2c2926}
+.btn-sub{background:var(--grn);color:#fff;border-color:var(--grn);display:none}.btn-sub:hover{background:#15803d}
+.ai-col{width:360px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
+.ai-col.closed{width:44px}
+.ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ai-ht{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap}
+.ai-dot{width:6px;height:6px;background:#86efac;border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.ai-tog{background:none;border:none;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;padding:3px}
+.ai-tog:hover{color:#fff}
+.ai-ok{background:var(--grn-lt);border-bottom:1px solid #bbf7d0;padding:6px 12px;font-size:11px;color:var(--grn);flex-shrink:0}
+.mtabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.mtab{flex:1;padding:8px 4px;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;text-align:center}
+.mtab.on{color:var(--red);border-bottom-color:var(--red);background:var(--red-lt)}
+.ai-lock{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:6px;color:var(--ink2)}
+.ai-msgs{flex:1;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.msg{max-width:90%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.7;animation:fu .2s}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.msg.u{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:3px}
+.msg.a{align-self:flex-start;background:var(--bg);color:var(--ink);border-bottom-left-radius:3px}
+.msg.a .lbl{font-size:10px;font-weight:700;color:var(--ink3);margin-bottom:2px}
+.typing{align-self:flex-start;display:flex;gap:3px;padding:9px 12px;background:var(--bg);border-radius:12px;border-bottom-left-radius:3px}
+.typing span{width:6px;height:6px;background:var(--ink3);border-radius:50%;animation:bo 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bo{0%,100%{transform:none;opacity:.4}50%{transform:translateY(-4px);opacity:1}}
+.qbtns{padding:8px 11px;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);display:flex;flex-wrap:wrap;gap:4px;flex-shrink:0}
+.qbtn{padding:3px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:11px;font-family:inherit;font-size:11px;color:var(--ink);cursor:pointer;transition:all .15s;white-space:nowrap}
+.qbtn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ai-in{padding:9px 11px;display:flex;gap:6px;align-items:flex-end;flex-shrink:0}
+.ai-in textarea{flex:1;padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;max-height:75px;line-height:1.5;transition:border-color .18s}
+.ai-in textarea:focus{border-color:var(--red)}
+.send-btn{width:34px;height:34px;background:var(--red);border:none;border-radius:var(--rs);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.send-btn:hover{background:#a93226}.send-btn:disabled{background:var(--bd);cursor:not-allowed}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--ink);color:#fff;padding:10px 15px;border-radius:var(--rs);font-size:13px;font-weight:500;box-shadow:var(--sh-lg);z-index:9999;transform:translateY(55px);opacity:0;transition:all .28s;pointer-events:none}
+.toast.show{transform:none;opacity:1}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px);padding:20px}
+.ov.show{opacity:1;pointer-events:all}
+.modal{background:var(--sf);border-radius:16px;padding:28px;max-width:460px;width:100%;box-shadow:var(--sh-lg);transform:scale(.94);transition:transform .2s}
+.ov.show .modal{transform:none}
+.modal h3{font-family:"Noto Serif KR",serif;font-size:17px;font-weight:700;margin-bottom:7px}
+.modal p{color:var(--ink2);font-size:13px;line-height:1.7;margin-bottom:18px}
+.mbtns{display:flex;gap:7px}
+.btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+@media(max-width:860px){.ai-col{width:300px}.g2{grid-template-columns:1fr}}
+@media(max-width:660px){.s-body{flex-direction:column-reverse}.ai-col{width:100%;height:260px;border-left:none;border-top:1px solid var(--bd)}.ai-col.closed{width:100%;height:42px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="pg-login" class="scr on">
+  <div class="brand">
+    <div class="brand-ico">✍️</div>
+    <h1>글쓰기 학습터</h1>
+    <p>AI 활용 협력 글쓰기 연구 플랫폼 v6</p>
+  </div>
+  <div class="card">
+    <div class="tabs">
+      <button class="tab on" id="tab-s-btn" onclick="switchTab('s')">학생 입장</button>
+      <button class="tab" id="tab-t-btn" onclick="switchTab('t')">교사/연구자</button>
+    </div>
+    <div id="tab-s">
+      <div class="fld"><label>이름</label><input id="s-name" placeholder="홍길동" autocomplete="off"></div>
+      <div class="fld"><label>교사 발급 코드</label><input id="s-code" placeholder="WRITE1" maxlength="8" style="letter-spacing:4px;font-weight:700;text-transform:uppercase"></div>
+      <div class="fld"><label>글쓰기 주제</label><input id="s-topic" placeholder="교사가 알려준 주제를 입력하세요"></div>
+      <button class="btn-p" onclick="studentEnter()">입장하기 →</button>
+    </div>
+    <div id="tab-t" style="display:none">
+      <div class="note-box">비밀번호: <strong>teacher123</strong></div>
+      <div class="fld"><label>비밀번호</label><input id="t-pw" type="password" placeholder="teacher123"></div>
+      <button class="btn-p" onclick="teacherEnter()">관리자 입장 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEACHER -->
+<div id="pg-teacher" class="scr">
+  <div class="t-top">
+    <h2>📋 연구자 패널</h2>
+    <div style="display:flex;gap:7px">
+      <button class="btn-gh" onclick="exportCSV()">📥 CSV</button>
+      <button class="btn-gh" onclick="renderSubs()">🔄 새로고침</button>
+      <button class="btn-gh" onclick="goLogin()">로그아웃</button>
+    </div>
+  </div>
+  <div class="t-body">
+    <div class="tc">
+      <h3>🔑 Claude API 키 설정</h3>
+      <p class="tc-sub">API 키를 입력하면 학생들이 웹페이지 안에서 바로 AI와 대화할 수 있습니다.<br>
+      발급: <a href="https://console.anthropic.com" target="_blank" style="color:var(--blu)">console.anthropic.com</a> → API Keys → Create Key</p>
+      <div class="row">
+        <input id="api-key-input" type="password" placeholder="sk-ant-api03-...">
+        <button class="btn-sm red" onclick="saveApiKey()">저장</button>
+        <button class="btn-sm" onclick="testApiKey()">테스트</button>
+      </div>
+      <p id="api-key-status" style="font-size:11px;color:var(--ink3);margin-top:5px">미설정</p>
+    </div>
+    <div class="tc">
+      <h3>🎟️ 수업 입장 코드</h3>
+      <p class="tc-sub">학생들에게 아래 코드를 알려주세요.</p>
+      <div class="code-box">
+        <div><div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px">현재 코드</div><div class="code-val" id="cur-code">WRITE1</div></div>
+        <div style="display:flex;gap:6px"><button class="btn-sm" onclick="newCode()">새 코드</button><button class="btn-sm" onclick="copyCode()">복사</button></div>
+      </div>
+    </div>
+    <div class="tc">
+      <h3>🤖 단계별 AI 허용</h3>
+      <p class="tc-sub">각 단계에서 AI 사용을 허용할지 설정합니다.</p>
+      <div class="g2">
+        <div class="stog on" id="card-plan"><div class="stog-l"><span class="ico">🗂️</span><div><strong>계획하기</strong><span>자료조사·주제 설정</span></div></div><label class="sw"><input type="checkbox" id="tog-plan" checked onchange="updateCard('plan',this.checked)"><span class="sw-t"></span></label></div>
+        <div class="stog on" id="card-outline"><div class="stog-l"><span class="ico">📋</span><div><strong>개요쓰기</strong><span>구조·흐름 구성</span></div></div><label class="sw"><input type="checkbox" id="tog-outline" checked onchange="updateCard('outline',this.checked)"><span class="sw-t"></span></label></div>
+        <div class="stog" id="card-draft"><div class="stog-l"><span class="ico">✏️</span><div><strong>초고쓰기</strong><span>자유 작성</span></div></div><label class="sw"><input type="checkbox" id="tog-draft" onchange="updateCard('draft',this.checked)"><span class="sw-t"></span></label></div>
+        <div class="stog on" id="card-revise"><div class="stog-l"><span class="ico">🔍</span><div><strong>고쳐쓰기</strong><span>피드백·개선</span></div></div><label class="sw"><input type="checkbox" id="tog-revise" checked onchange="updateCard('revise',this.checked)"><span class="sw-t"></span></label></div>
+      </div>
+      <button class="btn-sm red" style="margin-top:12px" onclick="saveSettings()">설정 저장</button>
+    </div>
+    <div class="tc">
+      <h3>📊 Google Forms 연동</h3>
+      <p class="tc-sub">Google Apps Script 웹앱 URL을 입력하면 학생 제출 시 Google Sheets에 자동 저장됩니다.</p>
+      <div class="flist"><code>학생이름</code> <code>주제</code> <code>계획글자수</code> <code>개요글자수</code> <code>초고글자수</code> <code>최종글자수</code> <code>계획AI질문수</code> <code>개요AI질문수</code> <code>초고AI질문수</code> <code>고쳐쓰기AI질문수</code> <code>총AI질문수</code> <code>AI질문답변전체</code> <code>초고최종유사도</code> <code>지식수준</code> <code>지식수준설명</code> <code>글질향상자기평가</code> <code>AI활용반성</code> <code>초고내용</code> <code>최종글내용</code></div>
+      <div class="row"><input id="forms-url" type="url" placeholder="https://docs.google.com/forms/d/…/formResponse"><button class="btn-sm grn" onclick="saveForms()">저장</button></div>
+      <p id="forms-st" style="font-size:11px;color:var(--ink3);margin-top:5px">미설정</p>
+    </div>
+    <div class="tc">
+      <h3>🔬 연구 데이터</h3>
+      <div id="res-summary" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn-sm grn" onclick="exportCSV()">📥 CSV 다운로드</button>
+        <button class="btn-sm" onclick="renderSubs()">🔄 새로고침</button>
+        <button class="btn-sm" onclick="resetData()">🗑️ 초기화</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="dtbl">
+          <thead><tr><th></th><th>이름</th><th>주제</th><th>단계</th><th>계획</th><th>개요</th><th>초고</th><th>최종</th><th>글자변화</th><th>AI질문</th><th>AI↔최종유사도</th><th>지식수준</th><th>글질평가</th><th>제출</th></tr></thead>
+          <tbody id="sub-tbody"><tr><td colspan="14" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT -->
+<div id="pg-student" class="scr">
+  <header class="s-top">
+    <div class="s-logo">✍️ <span id="badge-nm" style="font-family:'Noto Sans KR';font-size:11px;font-weight:400;color:var(--ink2)"></span></div>
+    <nav class="snav-wrap">
+      <button class="snav on" id="snav-plan" onclick="goStage('plan')">🗂️ 계획하기</button>
+      <button class="snav" id="snav-outline" onclick="goStage('outline')">📋 개요쓰기</button>
+      <button class="snav" id="snav-draft" onclick="goStage('draft')">✏️ 초고쓰기</button>
+      <button class="snav" id="snav-revise" onclick="goStage('revise')">🔍 고쳐쓰기</button>
+    </nav>
+    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
+  </header>
+  <div class="s-body">
+    <div class="wcol">
+
+      <!-- 계획하기 -->
+      <div id="st-plan" style="display:flex;flex-direction:column">
+        <div class="sth"><h2>🗂️ 계획하기</h2><p>방향을 잡고 AI에게 자료조사를 요청하세요. <strong>AI 조사 내용 메모</strong>는 KL 분석 기준이 됩니다.</p></div>
+        <div class="wscroll">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="pc"><label>✦ 글쓰기 주제</label><input id="p-topic" placeholder="무엇에 대해 쓸 건가요?" oninput="trackC('plan')"></div>
+              <div class="pc"><label>✦ 글의 목적</label><textarea id="p-purpose" rows="2" placeholder="설득, 정보 전달…" oninput="trackC('plan')"></textarea></div>
+              <div class="pc"><label>✦ 예상 독자</label><textarea id="p-reader" rows="2" placeholder="누가 읽나요?" oninput="trackC('plan')"></textarea></div>
+              <div class="pc"><label>✦ 핵심 주장</label><textarea id="p-idea" rows="2" placeholder="이 글에서 가장 하고 싶은 말은?" oninput="trackC('plan')"></textarea></div>
+              <div class="pc"><label>✦ 분량·형식</label><textarea id="p-format" rows="2" placeholder="에세이, 논설문… 몇 자?" oninput="trackC('plan')"></textarea></div>
+            </div>
+            <div class="pc" style="display:flex;flex-direction:column">
+              <label>✦ AI 조사 내용 메모</label>
+              <div style="font-size:10px;color:var(--ink3);margin-bottom:6px;line-height:1.5">AI에게 받은 자료를 자신의 말로 정리하세요.<br><strong style="color:var(--pur)">KL 문장 분석의 비교 기준</strong>이 됩니다.</div>
+              <textarea id="p-ref" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="예) 독일: 2023년 원전 완전 폐쇄&#10;이유: 안전 우려, 재생에너지 전환&#10;&#10;벨기에: 2025년 단계 폐쇄…" oninput="trackC('plan')"></textarea>
+            </div>
+            <div class="pc" style="display:flex;flex-direction:column">
+              <label>✦ 추가 메모 / 아이디어</label>
+              <div style="font-size:10px;color:var(--ink3);margin-bottom:6px">반론, 추가 조사, 자유 아이디어</div>
+              <textarea id="p-memo2" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="반론, 추가 조사할 것들…" oninput="trackC('plan')"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 개요쓰기 -->
+      <div id="st-outline" style="display:none;flex-direction:column">
+        <div class="sth"><h2>📋 개요쓰기</h2><p>글의 뼈대를 잡아봅시다. 각 칸에 충분히 적어보세요.</p></div>
+        <div class="wscroll">
+          <div style="background:var(--amb-lt);border:1px solid #fde68a;border-radius:var(--rs);padding:9px 13px;font-size:12px;color:var(--amb)">
+            💡 서론(주제 소개) → 본론(핵심 내용 2~3개) → 결론(마무리) 구조를 기억하세요.
+          </div>
+          <div id="ol-wrap" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
+          <button onclick="addOLCard()" style="align-self:flex-start;padding:7px 14px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--grn);cursor:pointer">＋ 항목 추가</button>
+        </div>
+      </div>
+
+      <!-- 초고쓰기 -->
+      <div id="st-draft" style="display:none;flex-direction:column">
+        <div class="sth"><h2>✏️ 초고쓰기</h2><p>왼쪽 개요를 보면서 자유롭게 써봅시다.</p></div>
+        <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+          <div style="width:230px;border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0;background:var(--bg)">
+            <div style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--bd);background:var(--sf)">📋 내 개요</div>
+            <div id="ol-preview" style="flex:1;overflow-y:auto;padding:12px 14px;font-size:12px;color:var(--ink2);line-height:1.9">
+              <p style="color:var(--ink3);font-size:12px">개요쓰기 단계에서 작성한 내용이 여기에 표시됩니다.</p>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div class="wscroll">
+              <textarea id="draft-ta" class="big-ta" placeholder="여기에 초고를 작성해 보세요…&#10;&#10;왼쪽 개요를 보면서 각 항목을 글로 풀어써 보세요." oninput="trackC('draft');cntWC('draft')"></textarea>
+              <div style="font-size:11px;color:var(--ink3);text-align:right"><span id="draft-wc">0</span>자</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 고쳐쓰기 -->
+      <div id="st-revise" style="display:none;flex-direction:column">
+        <div class="sth"><h2>🔍 고쳐쓰기</h2><p>초고를 다듬어봅시다. AI에게 피드백을 요청하거나 직접 수정하세요.</p></div>
+        <div class="wscroll">
+          <div style="background:var(--blu-lt);border:1px solid #bfdbfe;border-radius:var(--rs);padding:9px 13px;font-size:12px;color:var(--blu)">
+            ✏️ 초고를 직접 고쳐 쓰세요. AI에게 문단별 피드백을 요청할 수도 있어요.
+          </div>
+          <textarea id="revise-ta" class="big-ta" placeholder="초고를 불러오거나 직접 수정해 보세요…" oninput="trackC('revise');cntWC('revise')"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:2px">
+            <span style="font-size:11px;color:var(--ink3)"><span id="revise-wc">0</span>자</span>
+            <span id="revise-diff" style="display:none;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px"></span>
+          </div>
+          <!-- 자기평가 -->
+          <div style="background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:16px 18px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px">📝 글 자기평가 <span style="font-size:10px;font-weight:400;color:var(--ink3)">(연구 데이터로 수집)</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;color:var(--ink2);flex:1">① 내용이 풍부하고 근거가 충분하다</span><div class="qs" data-k="content" style="display:flex;gap:4px"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;color:var(--ink2);flex:1">② 논리적 구조가 명확하다</span><div class="qs" data-k="structure" style="display:flex;gap:4px"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;color:var(--ink2);flex:1">③ 초고보다 글이 나아졌다</span><div class="qs" data-k="improvement" style="display:flex;gap:4px"></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;color:var(--ink2);flex:1">④ AI를 유용하게 활용했다</span><div class="qs" data-k="ai_utility" style="display:flex;gap:4px"></div></div>
+          </div>
+          <!-- AI 활용 반성 -->
+          <div style="background:var(--teal-lt);border:1.5px solid #99f6e4;border-radius:var(--rs);padding:13px 15px">
+            <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">💭 AI 활용 반성 <span style="font-size:10px;font-weight:400">— 연구 데이터로 수집</span></div>
+            <textarea id="ai-reflection" style="width:100%;height:70px;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;background:#fff;color:var(--ink);line-height:1.6" placeholder="AI를 어떻게 활용했나요? 어떤 내용을 참고하고 어떻게 바꿔 썼는지 적어주세요."></textarea>
+            <div style="font-size:11px;color:var(--teal);margin-top:4px">솔직하게 작성할수록 좋은 연구 자료가 됩니다 😊</div>
+          </div>
+          <!-- KL 분석 -->
+          <div class="kl-w" id="kl-widget">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px">🧠 지식 활용 수준 분석 <span style="font-size:10px;font-weight:400;color:var(--ink3)">Bereiter &amp; Scardamalia(1987) 기반</span></div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;text-align:center"><div id="kl-t-p" style="font-size:14px;font-weight:700;color:#3b82f6;margin-bottom:3px">--</div><div style="height:56px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex;align-items:flex-end;margin-bottom:4px"><div id="kl-t-b" style="width:100%;border-radius:4px;background:#3b82f6;transition:height .9s;height:0%"></div></div><div style="font-size:10px;color:var(--ink2);font-weight:600;line-height:1.4">Knowledge<br>Telling</div></div>
+              <div style="flex:1;text-align:center"><div id="kl-r-p" style="font-size:14px;font-weight:700;color:#f59e0b;margin-bottom:3px">--</div><div style="height:56px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex;align-items:flex-end;margin-bottom:4px"><div id="kl-r-b" style="width:100%;border-radius:4px;background:#f59e0b;transition:height .9s;height:0%"></div></div><div style="font-size:10px;color:var(--ink2);font-weight:600;line-height:1.4">Knowledge<br>Transformation</div></div>
+              <div style="flex:1;text-align:center"><div id="kl-c-p" style="font-size:14px;font-weight:700;color:#10b981;margin-bottom:3px">--</div><div style="height:56px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex;align-items:flex-end;margin-bottom:4px"><div id="kl-c-b" style="width:100%;border-radius:4px;background:#10b981;transition:height .9s;height:0%"></div></div><div style="font-size:10px;color:var(--ink2);font-weight:600;line-height:1.4">New Knowledge<br>Creation</div></div>
+            </div>
+            <div id="kl-cmt" style="margin-top:9px;font-size:12px;color:var(--ink2);line-height:1.7;padding-top:9px;border-top:1px solid var(--bd)"></div>
+            <button id="kl-sen-btn" onclick="analyzeSentences()" style="display:none;margin-top:10px;padding:8px 16px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔍 문장별 수준 표시하기</button>
+            <div id="kl-legend" style="display:none;margin-top:10px;font-size:11px;gap:12px;flex-wrap:wrap">
+              <span><span style="display:inline-block;width:10px;height:10px;background:#dbeafe;border-bottom:2px solid #3b82f6;border-radius:1px;margin-right:4px"></span>Telling</span>
+              <span style="margin-left:8px"><span style="display:inline-block;width:10px;height:10px;background:#fef3c7;border-bottom:2px solid #f59e0b;border-radius:1px;margin-right:4px"></span>Transformation</span>
+              <span style="margin-left:8px"><span style="display:inline-block;width:10px;height:10px;background:#dcfce7;border-bottom:2px solid #10b981;border-radius:1px;margin-right:4px"></span>Creation</span>
+            </div>
+            <div id="kl-ann" style="display:none;margin-top:12px">
+              <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px">📄 문장별 분석 (마우스 올리면 수준 설명)</div>
+              <div id="kl-ann-txt" style="background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:20px;font-family:'Noto Serif KR',serif;font-size:15px;line-height:2.4;white-space:pre-wrap;word-break:break-word"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bot-bar">
+        <div class="prog">
+          <div class="pdot cur" id="dot-plan"></div><div class="pdot" id="dot-outline"></div>
+          <div class="pdot" id="dot-draft"></div><div class="pdot" id="dot-revise"></div>
+        </div>
+        <div class="bar-r">
+          <button class="btn-nav" id="btn-prev" onclick="prevStage()" style="display:none">← 이전</button>
+          <button class="btn-nav btn-nxt" id="btn-next" onclick="nextStage()">다음 단계 →</button>
+          <button class="btn-nav btn-sub" id="btn-sub" onclick="submitFinal()">📤 최종 제출</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI -->
+    <aside class="ai-col" id="ai-col">
+      <div class="ai-head">
+        <div class="ai-ht"><div class="ai-dot"></div>AI 도우미</div>
+        <button class="ai-tog" onclick="toggleAI()" id="ai-tog-btn">◀</button>
+      </div>
+      <div id="ai-body" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="ov" id="ov"><div class="modal"><h3 id="mo-title"></h3><p id="mo-body"></p><div class="mbtns"><button class="btn-p" id="mo-ok" style="max-width:100px;padding:9px">확인</button><button class="btn-out" onclick="closeModal()">취소</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+
+const STAGES=['plan','outline','draft','revise'];
+const SN={plan:'계획하기',outline:'개요쓰기',draft:'초고쓰기',revise:'고쳐쓰기'};
+const QUICK={
+  plan:['이 주제 자료조사 해줘','찬반 논점 정리해줘','관련 사례·통계 알려줘','배경지식 설명해줘'],
+  outline:['개요 구조 제안해줘','논리 흐름 점검해줘','서론 어떻게 쓸까','결론 구성 도움'],
+  draft:['다음 문단 시작 도움','근거 추가 방법','이 표현 자연스러운가','연결어 추천'],
+  revise:['전체 피드백 해줘','문법·맞춤법 점검','표현 개선 제안','논리 구멍 찾아줘']
+};
+
+const S={
+  name:'',topic:'',stage:'plan',aiOpen:true,classCode:'WRITE1',formsUrl:'',
+  done:{plan:false,outline:false,draft:false,revise:false},
+  ai:{plan:true,outline:true,draft:false,revise:true},
+  qualStars:{content:0,structure:0,improvement:0,ai_utility:0},
+  research:{plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}}
+};
+
+async function callClaude(messages,system,maxTok=1000){
+  const key=S.apiKey||localStorage.getItem('wp_key')||'';
+  if(!key)throw new Error('API_KEY_MISSING');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTok,system,messages})});
+  if(!res.ok)throw new Error('API_'+res.status);
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message||'ERR');
+  return d.content.map(c=>c.text||'').join('');
+}
+
+function show(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on')}
+function goLogin(){show('pg-login')}
+
+function switchTab(t){
+  document.getElementById('tab-s-btn').classList.toggle('on',t==='s');
+  document.getElementById('tab-t-btn').classList.toggle('on',t==='t');
+  document.getElementById('tab-s').style.display=t==='s'?'block':'none';
+  document.getElementById('tab-t').style.display=t==='t'?'block':'none';
+}
+
+function studentEnter(){
+  try{
+  const name=document.getElementById('s-name').value.trim();
+  const code=document.getElementById('s-code').value.trim().toUpperCase();
+  const topic=document.getElementById('s-topic').value.trim();
+  if(!name){toast('이름을 입력해주세요');return}
+  if(code!==S.classCode){toast('코드가 올바르지 않습니다');return}
+  S.name=name;S.topic=topic||'자유 주제';
+  document.getElementById('badge-nm').textContent='— '+name+' 학생';
+  if(topic){const el=document.getElementById('p-topic');if(el)el.value=topic;}
+  S.qualStars={content:0,structure:0,improvement:0,ai_utility:0};
+  S.research={plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}};
+  loadSettings();
+  show('pg-student');
+  initOutline();initStars();
+  goStage('plan');renderAI();
+  updateSub({stage:'plan'});
+  }catch(e){toast('오류: '+e.message);console.error(e);}
+}
+
+function teacherEnter(){
+  try{
+  if(document.getElementById('t-pw').value!=='teacher123'){toast('비밀번호 오류');return}
+  loadSettings();renderSubs();show('pg-teacher');
+  }catch(e){toast('오류: '+e.message);console.error(e);}
+}
+
+function saveApiKey(){
+  const k=document.getElementById('api-key-input')?.value?.trim();
+  if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키 형식이 아닙니다 (sk-ant-... 로 시작)');return}
+  S.apiKey=k;localStorage.setItem('wp_key',k);
+  document.getElementById('api-key-status').textContent='✅ 저장됨';
+  toast('✅ API 키 저장됨');
+}
+async function testApiKey(){
+  const k=document.getElementById('api-key-input')?.value?.trim()||S.apiKey;
+  if(!k){toast('API 키를 먼저 입력하세요');return}
+  S.apiKey=k;
+  const st=document.getElementById('api-key-status');
+  st.textContent='테스트 중…';
+  try{
+    await callClaude([{role:'user',content:'안녕'}],'한 단어로만 답해: 네',10);
+    st.textContent='✅ 연결 성공!';toast('✅ API 연결 성공!');
+  }catch(e){
+    st.textContent='❌ 연결 실패: '+e.message;toast('❌ 연결 실패');
+  }
+}
+function saveStudentKey(){
+  const k=document.getElementById('student-api-input')?.value?.trim();
+  if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키를 입력하세요');return}
+  S.apiKey=k;localStorage.setItem('wp_key',k);
+  renderAI();toast('✅ API 키 저장됨. 이제 AI와 대화할 수 있어요!');
+}
+function newCode(){
+  S.classCode=[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'].sort(()=>Math.random()-.5).slice(0,6).join('');
+  document.getElementById('cur-code').textContent=S.classCode;
+  localStorage.setItem('wp_code',S.classCode);toast('✅ 새 코드: '+S.classCode);
+}
+function copyCode(){navigator.clipboard.writeText(S.classCode).then(()=>toast('복사됨: '+S.classCode))}
+function updateCard(s,on){S.ai[s]=on;document.getElementById('card-'+s).classList.toggle('on',on)}
+function saveSettings(){localStorage.setItem('wp_ai',JSON.stringify(S.ai));toast('✅ 설정 저장됨')}
+function saveForms(){
+  const u=document.getElementById('forms-url').value.trim();
+  if(!u||!u.includes('google.com')){toast('올바른 Google URL을 입력하세요');return}
+  S.formsUrl=u;localStorage.setItem('wp_forms',u);
+  document.getElementById('forms-st').textContent='✅ 연동됨';toast('✅ Forms 저장됨');
+}
+function loadSettings(){
+  const ai=localStorage.getItem('wp_ai');
+  if(ai){S.ai=JSON.parse(ai);Object.entries(S.ai).forEach(([k,v])=>{const el=document.getElementById('tog-'+k);if(el){el.checked=v;updateCard(k,v)}})}
+  const code=localStorage.getItem('wp_code');
+  if(code){S.classCode=code;const el=document.getElementById('cur-code');if(el)el.textContent=code}
+  const forms=localStorage.getItem('wp_forms');
+  if(forms){S.formsUrl=forms;const el=document.getElementById('forms-url');if(el)el.value=forms;const st=document.getElementById('forms-st');if(st)st.textContent='✅ 연동됨'}
+  const key=localStorage.getItem('wp_key');
+  if(key){S.apiKey=key;const el=document.getElementById('api-key-input');if(el){el.value=key;const st=document.getElementById('api-key-status');if(st)st.textContent='✅ 저장됨'}}
+}
+
+function renderSubs(){
+  const data=JSON.parse(localStorage.getItem('wp_subs')||'[]');
+  const sum=document.getElementById('res-summary');
+  if(sum&&data.length){
+    const avgQ=Math.round(data.reduce((a,r)=>a+STAGES.reduce((b,s)=>b+(r.research?.[s]?.aiQA?.length||0),0),0)/data.length);
+    sum.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${[['총학생',data.length],['제출완료',data.filter(r=>r.submitted).length],['평균AI질문',avgQ+'회'],['KL분석',data.filter(r=>r.kl).length]].map(([l,v])=>`<div style="background:var(--bg);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:20px;font-weight:700">${v}</div><div style="font-size:10px;color:var(--ink2)">${l}</div></div>`).join('')}</div>`;
+  }
+  const tbody=document.getElementById('sub-tbody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr>';return}
+  tbody.innerHTML=data.map((r,i)=>{
+    const tq=STAGES.reduce((a,s)=>a+(r.research?.[s]?.aiQA?.length||0),0);
+    const dc=r.research?.draft?.chars||0,rc=r.research?.revise?.chars||0;
+    const chg=dc>0?Math.round((rc-dc)/dc*100):0;
+    const qs=r.qualStars||{};
+    const qa=Object.values(qs).length?Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10:null;
+    const klk=r.kl?r.kl.split(' ').pop():'';
+    return `<tr>
+      <td><button class="btn-sm" style="padding:2px 7px;font-size:10px" onclick="toggleDet(${i})">▶</button></td>
+      <td><strong>${r.name}</strong></td>
+      <td style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${r.topic||''}</td>
+      <td><span class="bdg b-${r.stage}">${SN[r.stage]||r.stage}</span></td>
+      <td>${(r.research?.plan?.chars||0).toLocaleString()}</td>
+      <td>${(r.research?.outline?.chars||0).toLocaleString()}</td>
+      <td>${dc.toLocaleString()}</td><td>${rc.toLocaleString()}</td>
+      <td style="font-weight:700;color:${chg>5?'var(--grn)':chg<-5?'var(--red)':'var(--ink3)'}">${chg>0?'+'+chg:chg}%</td>
+      <td>${tq}</td>
+      <td>${r.similarity!=null?r.similarity+'%':'--'}</td>
+      <td>${klk?`<span class="bdg b-${klk}">Knowledge ${klk}</span>`:'--'}</td>
+      <td>${qa!=null?'★'.repeat(Math.round(qa))+' '+qa:'--'}</td>
+      <td>${r.submitted?'✅':'-'}</td>
+    </tr>
+    <tr><td colspan="14" style="padding:0">
+      <div class="dbox" id="det-${i}">
+        <div class="dg">${STAGES.map(st=>`<div class="dc"><h4>${SN[st]}</h4><p>글자: <strong>${(r.research?.[st]?.chars||0).toLocaleString()}자</strong></p><p>AI질문: <strong>${r.research?.[st]?.aiQA?.length||0}회</strong></p>${(r.research?.[st]?.aiQA||[]).slice(0,3).map(qa=>`<div class="qi"><div class="qq">Q: ${(qa.q||'').slice(0,50)}</div><div class="qa">A: ${(qa.a||'').slice(0,60)}</div></div>`).join('')}</div>`).join('')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">
+          <div class="dc"><h4>유사도 분석</h4><p>${r.similarity!=null?r.similarity+'% — '+(r.similarity>70?'거의 유사':r.similarity>40?'부분 수정':'많이 고쳐씀'):'제출 후 자동 분석'}</p></div>
+          <div class="dc"><h4>지식 수준 (KL)</h4><p>${r.klDetail||'미분석'}</p></div>
+          <div class="dc"><h4>AI 활용 반성</h4><p style="font-size:11px;color:var(--ink2)">${r.reflection||'작성 안 함'}</p></div>
+        </div>
+        ${r.klSentences?`<div class="dc" style="margin-top:8px"><h4>문장별 KL 분류</h4><p style="font-size:11px;color:var(--ink2)">${r.klSentences.slice(0,200)}...</p></div>`:''}
+      </div>
+    </td></tr>`;
+  }).join('');
+}
+function toggleDet(i){document.getElementById('det-'+i)?.classList.toggle('open')}
+
+function resetData(){if(confirm('전체 초기화?')){localStorage.removeItem('wp_subs');renderSubs();toast('초기화됨')}}
+function exportCSV(){
+  const data=JSON.parse(localStorage.getItem('wp_subs')||'[]');
+  if(!data.length){toast('데이터가 없습니다');return}
+  const H=['이름','주제','현재단계','계획글자','개요글자','초고글자','최종글자','글자변화율',
+    '계획AI질문수','개요AI질문수','초고AI질문수','고쳐쓰기AI질문수','총AI질문수',
+    '계획AI질문답변','개요AI질문답변','초고AI질문답변','고쳐쓰기AI질문답변',
+    'AI답변↔최종글유사도','초고↔최종글유사도','지식수준','지식수준설명',
+    '글질_내용(1-5)','글질_구조(1-5)','글질_향상(1-5)','글질_AI활용(1-5)','글질_평균',
+    'AI활용반성','계획유사도','개요유사도','초고유사도','고쳐쓰기유사도','전체평균유사도','KL_단계별상세','제출여부','제출시각',
+    '계획하기_주제','계획하기_목적','계획하기_독자','계획하기_핵심주장','계획하기_AI메모','계획하기_형식',
+    '개요쓰기_내용',
+    '초고내용','최종글내용'];
+  const rows=data.map(r=>{
+    const q=STAGES.map(s=>r.research?.[s]?.aiQA?.length||0);
+    const qa=STAGES.map(s=>(r.research?.[s]?.aiQA||[]).map(x=>`Q:${x.q||''}|A:${x.a||''}`).join(';;'));
+    const dc=r.research?.draft?.chars||0,rc=r.research?.revise?.chars||0;
+    const chg=dc>0?Math.round((rc-dc)/dc*100):0;
+    const qs=r.qualStars||{};
+    const qavg=Object.values(qs).length?Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10:'';
+    return [r.name,r.topic,SN[r.stage]||r.stage,
+      r.research?.plan?.chars||0,r.research?.outline?.chars||0,dc,rc,chg+'%',
+      ...q,q.reduce((a,b)=>a+b,0),...qa,
+      r.similarity!=null?r.similarity+'%':'미분석',r.draftSimilarity!=null?r.draftSimilarity+'%':'미분석',r.kl||'',r.klDetail||'',
+      qs.content||0,qs.structure||0,qs.improvement||0,qs.ai_utility||0,qavg,
+      r.reflection||'',(r.stageSim?.plan?.sim!=null?r.stageSim.plan.sim+'%':''),(r.stageSim?.outline?.sim!=null?r.stageSim.outline.sim+'%':''),(r.stageSim?.draft?.sim!=null?r.stageSim.draft.sim+'%':''),(r.stageSim?.revise?.sim!=null?r.stageSim.revise.sim+'%':''),(r.stageSim?.overall!=null?r.stageSim.overall+'%':''),r.klDetail||'',r.submitted?'제출':'진행중',r.submitTime||'',
+      r.planData?.topic||'',r.planData?.purpose||'',r.planData?.reader||'',
+      r.planData?.idea||'',r.planData?.ref||'',r.planData?.format||'',
+      r.outlineData||'',
+      r.draftText||'',r.finalText||''];
+  });
+    const csv='\uFEFF'+[H,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='글쓰기연구_'+new Date().toLocaleDateString('ko-KR').replace(/[\s.]/g,'')+'.csv';
+  a.click();toast('📥 CSV 다운로드 완료');
+}
+
+function goStage(s){
+  S.stage=s;
+  STAGES.forEach(x=>{
+    const el=document.getElementById('st-'+x);if(el)el.style.display=x===s?'flex':'none';
+    const nav=document.getElementById('snav-'+x);if(nav)nav.classList.toggle('on',x===s);
+  });
+  if(s==='revise')syncRevise();
+  if(s==='draft')updateOLPreview();
+  renderAI();updateBottom();updateSub({stage:s});
+}
+function nextStage(){const i=STAGES.indexOf(S.stage);if(i<STAGES.length-1){S.done[S.stage]=true;goStage(STAGES[i+1])}updateDots()}
+function prevStage(){const i=STAGES.indexOf(S.stage);if(i>0)goStage(STAGES[i-1])}
+function updateBottom(){
+  const i=STAGES.indexOf(S.stage),isLast=i===STAGES.length-1;
+  document.getElementById('btn-prev').style.display=i>0?'':'none';
+  document.getElementById('btn-next').style.display=isLast?'none':'';
+  document.getElementById('btn-sub').style.display=isLast?'inline-flex':'none';
+  updateDots();
+}
+function updateDots(){
+  STAGES.forEach(s=>{
+    const d=document.getElementById('dot-'+s);if(!d)return;
+    d.classList.remove('done','cur');
+    if(s===S.stage)d.classList.add('cur');else if(S.done[s])d.classList.add('done');
+    const nav=document.getElementById('snav-'+s);if(nav)nav.classList.toggle('done',!!S.done[s]);
+  });
+}
+function syncRevise(){
+  const d=document.getElementById('draft-ta'),r=document.getElementById('revise-ta');
+  if(d&&r&&!r.value&&d.value){r.value=d.value;cntWC('revise');updateReviseDiff()}
+}
+function cntWC(id){
+  const v=document.getElementById(id+'-ta')?.value||'';
+  const el=document.getElementById(id+'-wc');if(el)el.textContent=v.replace(/\s/g,'').length;
+  if(id==='revise')updateReviseDiff();
+}
+function updateReviseDiff(){
+  const dc=(document.getElementById('draft-ta')?.value||'').replace(/\s/g,'').length;
+  const rc=(document.getElementById('revise-ta')?.value||'').replace(/\s/g,'').length;
+  const el=document.getElementById('revise-diff');if(!el||!dc){if(el)el.style.display='none';return}
+  const pct=Math.round((rc-dc)/dc*100);
+  el.style.display='inline-block';
+  el.style.background=pct>=0?'var(--grn-lt)':'var(--red-lt)';
+  el.style.color=pct>=0?'var(--grn)':'var(--red)';
+  el.textContent='초고 대비 '+(pct>=0?'+':'')+pct+'%';
+}
+function trackC(stage){
+  let c=0;
+  if(stage==='plan'){['p-topic','p-purpose','p-reader','p-idea','p-ref','p-format','p-memo2'].forEach(id=>{const el=document.getElementById(id);if(el)c+=el.value.replace(/\s/g,'').length})}
+  else if(stage==='outline'){document.querySelectorAll('#ol-wrap .ol-ta').forEach(el=>c+=el.value.replace(/\s/g,'').length)}
+  else{const el=document.getElementById(stage+'-ta');if(el)c=el.value.replace(/\s/g,'').length}
+  S.research[stage].chars=c;updateSub({research:S.research});
+}
+
+const OL_CFG=[
+  {label:'서론',hint:'주제 소개 및 독자 관심 유발',color:'#3b82f6'},
+  {label:'본론 1',hint:'첫 번째 핵심 내용 및 근거',color:'#10b981'},
+  {label:'본론 2',hint:'두 번째 핵심 내용 및 근거',color:'#10b981'},
+  {label:'본론 3',hint:'세 번째 핵심 내용 (선택)',color:'#f59e0b'},
+  {label:'결론',hint:'요약 및 마무리',color:'#c0392b'},
+];
+function initOutline(){
+  const wrap=document.getElementById('ol-wrap');if(!wrap)return;
+  wrap.innerHTML='';
+  OL_CFG.forEach((cfg,i)=>{
+    const div=document.createElement('div');
+    div.dataset.olCard='1';
+    div.style.cssText='background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:14px;display:flex;flex-direction:column;gap:6px';
+    const canDel=i>=3;
+    div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="display:flex;align-items:center;gap:7px">'
+      +'<div style="width:22px;height:22px;background:'+cfg.color+';color:#fff;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">'+(i+1)+'</div>'
+      +'<strong style="font-size:13px">'+cfg.label+'</strong></div>'
+      +(canDel?'<button onclick="this.closest("[data-ol-card]").remove()" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1">×</button>':'')
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--ink3)">'+cfg.hint+'</div>'
+      +'<textarea class="ol-ta" rows="4" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;line-height:1.8;min-height:100px"'
+      +' placeholder="'+cfg.hint+' 내용을 입력하세요…"'
+      +' oninput="trackC("outline")" onfocus="this.style.borderColor="var(--red)"" onblur="this.style.borderColor="var(--bd)""></textarea>';
+    wrap.appendChild(div);
+  });
+}
+function addOLCard(){
+  const wrap=document.getElementById('ol-wrap');if(!wrap)return;
+  const div=document.createElement('div');div.dataset.olCard='1';
+  div.style.cssText='background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--rs);padding:14px;display:flex;flex-direction:column;gap:6px';
+  const header=document.createElement('div');
+  header.style.cssText='display:flex;align-items:center;justify-content:space-between';
+  header.innerHTML='<strong style="font-size:13px">추가 항목</strong><button style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1">×</button>';
+  header.querySelector('button').onclick=function(){this.closest('[data-ol-card]').remove()};
+  const ta=document.createElement('textarea');
+  ta.className='ol-ta';ta.rows=4;ta.placeholder='내용을 입력하세요…';
+  ta.style.cssText='width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;line-height:1.8;min-height:100px';
+  ta.addEventListener('input',function(){trackC('outline');this.style.height='auto';this.style.height=this.scrollHeight+'px'});
+  ta.addEventListener('focus',function(){this.style.borderColor='var(--red)'});
+  ta.addEventListener('blur',function(){this.style.borderColor='var(--bd)'});
+  div.appendChild(header);div.appendChild(ta);wrap.appendChild(div);
+}
+
+function updateOLPreview(){
+  const preview=document.getElementById('ol-preview');if(!preview)return;
+  const tas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+  const labels=['서론','본론 1','본론 2','본론 3','결론'];
+  const colors=['#3b82f6','#10b981','#10b981','#f59e0b','#c0392b'];
+  if(!tas.length){preview.innerHTML='<p style="color:var(--ink3);font-size:12px">개요가 없습니다.</p>';return}
+  preview.innerHTML=tas.map((ta,i)=>{
+    const txt=ta.value.trim();if(!txt)return'';
+    const lbl=labels[i]||('항목 '+(i+1));
+    const col=colors[i]||'var(--ink3)';
+    return '<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bd)">'
+      +'<div style="font-size:10px;font-weight:700;color:'+col+';letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">'+lbl+'</div>'
+      +'<div style="font-size:12px;color:var(--ink);line-height:1.8">'+esc(txt).split('\n').join('<br>')+'</div></div>';
+  }).join('')||'<p style="color:var(--ink3);font-size:12px">작성된 개요가 없습니다.</p>';
+}
+
+function initStars(){
+  document.querySelectorAll('.qs').forEach(container=>{
+    container.innerHTML='';
+    for(let i=1;i<=5;i++){
+      const btn=document.createElement('button');
+      btn.textContent='☆';btn.style.cssText='background:none;border:none;cursor:pointer;font-size:20px;padding:2px';
+      const k=container.dataset.k,v=i;
+      btn.onclick=()=>setStar(k,v);
+      container.appendChild(btn);
+    }
+  });
+}
+function setStar(key,val){
+  S.qualStars[key]=val;
+  document.querySelectorAll('.qs[data-k="'+key+'"] button').forEach((btn,i)=>{btn.textContent=i<val?'★':'☆'});
+  updateSub({qualStars:S.qualStars});
+}
+
+function renderKL(r){
+  const w=document.getElementById('kl-widget');if(w)w.style.display='block';
+  document.getElementById('kl-t-p').textContent=r.tell+'%';
+  document.getElementById('kl-r-p').textContent=r.trans+'%';
+  document.getElementById('kl-c-p').textContent=r.create+'%';
+  document.getElementById('kl-t-b').style.height=r.tell+'%';
+  document.getElementById('kl-r-b').style.height=r.trans+'%';
+  document.getElementById('kl-c-b').style.height=r.create+'%';
+  document.getElementById('kl-cmt').innerHTML='<strong>주요 수준: Knowledge '+(r.dominant||'Telling')+'</strong><br>'+esc(r.comment||'');
+  const btn=document.getElementById('kl-sen-btn');if(btn)btn.style.display='inline-block';
+  const leg=document.getElementById('kl-legend');if(leg)leg.style.display='flex';
+}
+
+async function analyzeSentences(){
+  const finalText=document.getElementById('revise-ta')?.value||'';
+  if(!finalText||finalText.trim().length<20){toast('분석할 글이 너무 짧습니다');return}
+  const btn=document.getElementById('kl-sen-btn');btn.textContent='🔄 분석 중…';btn.disabled=true;
+  const aiMemo=document.getElementById('p-ref')?.value||'';
+  const allQA=STAGES.flatMap(s=>S.research[s].aiQA||[]);
+  try{
+    const prompt=`학생 글을 Bereiter & Scardamalia(1987) 지식 모델로 문장별 분류해주세요.
+
+[AI 조사 내용 메모]:
+${aiMemo.slice(0,600)||'없음'}
+
+[학생 최종 글]:
+${finalText.slice(0,2000)}
+
+위 AI 메모와 최종 글을 비교해서 JSON 배열만 응답:
+[{"sentence":"문장 그대로","level":"T","reason":"15자 이내 이유"},...]
+
+T=AI메모와 거의 동일 / R=자신의 말로 재구성 / C=새 관점·주장 생성
+앞 15문장만 분류하세요.`;
+    const raw=await callClaude([{role:'user',content:prompt}],'글쓰기 교육 연구자. JSON 배열만 응답.',1500);
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    renderAnnotated(parsed,finalText);
+    updateSub({klSentences:JSON.stringify(parsed).slice(0,500)});
+  }catch(e){toast('문장 분석 오류: '+e.message)}
+  btn.textContent='🔍 다시 분석';btn.disabled=false;
+}
+
+function renderAnnotated(sentences,finalText){
+  const container=document.getElementById('kl-ann');
+  const textEl=document.getElementById('kl-ann-txt');
+  if(!container||!textEl)return;
+  const sm={T:'background:#dbeafe;border-bottom:2px solid #3b82f6;border-radius:2px',
+            R:'background:#fef3c7;border-bottom:2px solid #f59e0b;border-radius:2px',
+            C:'background:#dcfce7;border-bottom:2px solid #10b981;border-radius:2px'};
+  const lm={T:'Knowledge Telling',R:'Knowledge Transformation',C:'New Knowledge Creation'};
+  let html=esc(finalText);
+  sentences.forEach(item=>{
+    if(!item.sentence||item.sentence.length<5)return;
+    const st=sm[item.level]||sm.T;
+    const lbl=lm[item.level]||'';
+    try{
+      const escaped=esc(item.sentence).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      const re=new RegExp(escaped,'');
+      html=html.replace(re,'<span style="'+st+';cursor:pointer" title="'+lbl+(item.reason?' — '+item.reason:'')+'">'+ esc(item.sentence)+'</span>');
+    }catch(e){}
+  });
+  textEl.innerHTML=html.split('\n').join('<br>');
+  container.style.display='block';
+  toast('✅ 문장별 분석 완료! 문장 위에 마우스를 올려보세요.');
+}
+
+async function submitFinal(){
+  openModal('최종 제출','작성한 글을 제출하시겠습니까? AI가 유사도와 지식 수준을 분석합니다.',async()=>{
+    closeModal();
+    STAGES.forEach(s=>trackC(s));
+    const draftText=document.getElementById('draft-ta')?.value||'';
+    const finalText=document.getElementById('revise-ta')?.value||draftText;
+    const reflection=document.getElementById('ai-reflection')?.value||'';
+    const allQA=STAGES.flatMap(s=>S.research[s].aiQA||[]);
+    toast('📊 AI가 분석 중입니다… 잠시만 기다려주세요');
+
+    let simResult=null,klResult=null;
+    try{
+      const [s,k]=await Promise.all([
+        calcSimilarity(draftText,finalText),
+        calcKL(draftText,finalText,allQA,reflection)
+      ]);
+      simResult=s;klResult=k;
+    }catch(e){}
+
+    if(klResult)renderKL(klResult);
+
+    const aiSim=simResult?.aiVsFinal??null;
+    const draftSim=simResult?.draftVsFinal??null;
+
+    const planData={
+      topic:document.getElementById('p-topic')?.value||'',
+      purpose:document.getElementById('p-purpose')?.value||'',
+      reader:document.getElementById('p-reader')?.value||'',
+      idea:document.getElementById('p-idea')?.value||'',
+      ref:document.getElementById('p-ref')?.value||'',
+      format:document.getElementById('p-format')?.value||''
+    };
+    const outlineTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+    const outlineData=outlineTas.map((ta,i)=>{
+      const labels=['서론','본론1','본론2','본론3','결론'];
+      return (labels[i]||('항목'+(i+1)))+': '+ta.value.trim();
+    }).filter(t=>t.split(': ')[1]).join('\n');
+
+    const submitData={submitted:true,submitTime:new Date().toLocaleString('ko-KR'),
+      draftText,finalText,reflection,
+      similarity:aiSim,
+      draftSimilarity:draftSim,
+      qualStars:S.qualStars,
+      kl:klResult?'Knowledge '+klResult.dominant:'',klDetail:klResult?.comment||'',stageSim:klResult?.stageSim||{},klSentenceDetails:klResult?.sentenceDetails||[],
+      planData,outlineData};
+    updateSub(submitData);
+
+    if(S.formsUrl){
+      try{
+        const tq=STAGES.reduce((a,s)=>a+(S.research[s].aiQA?.length||0),0);
+        const qaStr=allQA.map(qa=>'Q:'+qa.q+'|A:'+(qa.a||'').slice(0,100)).join(';;');
+        const qs=S.qualStars;
+        const qa=Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10;
+        const dc=S.research.draft.chars,rc=S.research.revise.chars;
+        const chg=dc>0?Math.round((rc-dc)/dc*100)+'%':'0%';
+        const payload={
+          '학생이름':S.name,
+          '주제':S.topic,
+          '계획글자수':S.research.plan.chars,
+          '개요글자수':S.research.outline.chars,
+          '초고글자수':dc,
+          '최종글자수':rc,
+          '글자변화율':chg,
+          '계획AI질문수':S.research.plan.aiQA.length,
+          '개요AI질문수':S.research.outline.aiQA.length,
+          '초고AI질문수':S.research.draft.aiQA.length,
+          '고쳐쓰기AI질문수':S.research.revise.aiQA.length,
+          '총AI질문수':tq,
+          'AI질문답변전체':qaStr.slice(0,1000),
+          '초고최종유사도':simResult!=null?simResult+'%':'미분석',
+          '지식수준':submitData.kl||'',
+          '지식수준설명':submitData.klDetail||'',
+          '글질_내용':qs.content||0,
+          '글질_구조':qs.structure||0,
+          '글질_향상':qs.improvement||0,
+          '글질_AI활용':qs.ai_utility||0,
+          '글질_평균':qa,
+          'AI활용반성':reflection,
+          '초고내용':draftText.slice(0,500),
+          '최종글내용':finalText.slice(0,500)
+        };
+        await fetch(S.formsUrl,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+      }catch(e){console.log('Sheets 저장 오류:',e)}
+    }
+    toast('✅ 제출 완료! 수고했어요 🎉');
+    renderSubs();
+  });
+}
+
+
+function tokenizeKo(text){
+  const words=text.replace(/[^가-힣a-zA-Z0-9]/g,' ').split(/\s+/).filter(w=>w.length>=2);
+  const bigrams=[];
+  words.forEach(w=>{for(let i=0;i<w.length-1;i++)bigrams.push(w[i]+w[i+1])});
+  return [...words,...bigrams];
+}
+
+function cosineSim(text1,text2){
+  if(!text1||!text2)return 0;
+  const t1=tokenizeKo(text1),t2=tokenizeKo(text2);
+  if(!t1.length||!t2.length)return 0;
+  const v1={},v2={};
+  t1.forEach(t=>v1[t]=(v1[t]||0)+1);
+  t2.forEach(t=>v2[t]=(v2[t]||0)+1);
+  const all=new Set([...t1,...t2]);
+  let dot=0,n1=0,n2=0;
+  all.forEach(k=>{
+    dot+=(v1[k]||0)*(v2[k]||0);
+    n1+=(v1[k]||0)**2;
+    n2+=(v2[k]||0)**2;
+  });
+  return n1&&n2?dot/Math.sqrt(n1*n2):0;
+}
+
+function splitSents(text){
+  return text.replace(/([.!?])\s+/g,'$1\n').replace(/(다[.!?])/g,'$1\n').split('\n').map(s=>s.trim()).filter(s=>s.length>10);
+}
+
+function getCumulativeAI(upToStage){
+  const order=['plan','outline','draft','revise'];
+  const idx=order.indexOf(upToStage);
+  if(idx<0)return'';
+  return order.slice(0,idx+1)
+    .flatMap(s=>S.research[s].aiQA||[])
+    .map(qa=>qa.a||'')
+    .join(' ');
+}
+
+function getStageStudentText(stage){
+  if(stage==='plan'){
+    return document.getElementById('p-ref')?.value||'';
+  }
+  if(stage==='outline'){
+    const tas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+    return tas.map(ta=>ta.value.trim()).filter(Boolean).join(' ');
+  }
+  if(stage==='draft'){
+    return document.getElementById('draft-ta')?.value||'';
+  }
+  if(stage==='revise'){
+    return document.getElementById('revise-ta')?.value||'';
+  }
+  return'';
+}
+
+function calcStageSimilarity(){
+  const stages=['plan','outline','draft','revise'];
+  const labels={plan:'계획하기',outline:'개요쓰기',draft:'초고쓰기',revise:'고쳐쓰기'};
+  const results={};
+
+  stages.forEach(stage=>{
+    const cumulativeAI=getCumulativeAI(stage);
+    const studentText=getStageStudentText(stage);
+    const aiQCount=S.research[stage].aiQA?.length||0;
+
+    if(!cumulativeAI||!studentText||aiQCount===0){
+      results[stage]={sim:null,level:null,aiQCount,label:labels[stage]};
+      return;
+    }
+
+    const sim=Math.round(cosineSim(cumulativeAI,studentText)*100);
+    const level=sim>=50?'T':sim>=20?'R':'C';
+    results[stage]={sim,level,aiQCount,label:labels[stage]};
+  });
+
+  const vals=Object.values(results).filter(r=>r.sim!==null).map(r=>r.sim);
+  results.overall=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+
+  return results;
+}
+
+function judgeKLFromStageSim(stageSim){
+  const vals=Object.values(stageSim).filter(r=>r&&r.sim!==null);
+  if(!vals.length)return{tell:33,trans:34,create:33,dominant:'Transformation'};
+
+  let tCount=0,rCount=0,cCount=0;
+  vals.forEach(r=>{
+    if(r.level==='T')tCount++;
+    else if(r.level==='R')rCount++;
+    else cCount++;
+  });
+
+  const total=vals.length;
+  const tell=Math.round(tCount/total*100);
+  const trans=Math.round(rCount/total*100);
+  const create=100-tell-trans;
+  const dominant=tell>=trans&&tell>=create?'Telling':trans>=tell&&trans>=create?'Transformation':'Creation';
+
+  const details=vals.map(r=>`${r.label}: AI누적↔학생=${r.sim}%(${r.level==='T'?'Telling':r.level==='R'?'Transformation':'Creation'})`).join(', ');
+  const comment=`단계별 분석 — ${details}. 전체 평균 유사도: ${stageSim.overall}%`;
+
+  return{tell,trans,create,dominant,comment};
+}
+
+async function calcSimilarity(draft,final){
+  if(!draft||!final)return null;
+  const draftVsFinal=Math.round(cosineSim(draft,final)*100);
+  const stageSim=calcStageSimilarity();
+  const allQA=STAGES.flatMap(s=>S.research[s].aiQA||[]);
+  const aiContent=allQA.map(qa=>qa.a||'').join(' ');
+  const aiVsFinal=Math.round(cosineSim(aiContent,final)*100);
+  return{aiVsFinal,draftVsFinal,stageSim};
+}
+
+async function calcKL(draft,final,allQA,reflection){
+  const stageSim=calcStageSimilarity();
+
+  const klResult=judgeKLFromStageSim(stageSim);
+
+  const reviseAI=getCumulativeAI('revise');
+  const sentences=splitSents(final);
+  const sentenceDetails=sentences.slice(0,15).map(sentence=>{
+    const sim=cosineSim(reviseAI,sentence);
+    const simPct=Math.round(sim*100);
+    const level=simPct>=50?'T':simPct>=20?'R':'C';
+    return{sentence,sim:simPct,level};
+  });
+
+  const tSents=sentenceDetails.filter(s=>s.level==='T').length;
+  const rSents=sentenceDetails.filter(s=>s.level==='R').length;
+  const cSents=sentenceDetails.filter(s=>s.level==='C').length;
+
+  const fullComment=klResult.comment
+    +(sentenceDetails.length?` | 최종글 문장분석(${sentenceDetails.length}문장): T=${tSents} R=${rSents} C=${cSents}`:'');
+
+  return{
+    tell:klResult.tell,
+    trans:klResult.trans,
+    create:klResult.create,
+    dominant:klResult.dominant,
+    comment:fullComment,
+    stageSim,
+    sentenceDetails
+  };
+}
+
+function updateSub(data){
+  const subs=JSON.parse(localStorage.getItem('wp_subs')||'[]');
+  const i=subs.findIndex(s=>s.name===S.name);
+  const entry={name:S.name,topic:S.topic,stage:S.stage,submitted:false,...data};
+  if(i>=0)Object.assign(subs[i],entry);else subs.push(entry);
+  localStorage.setItem('wp_subs',JSON.stringify(subs));
+}
+
+function renderAI(){
+  const body=document.getElementById('ai-body');
+  if(!S.ai[S.stage]){
+    body.innerHTML='<div class="ai-lock"><div style="font-size:30px;margin-bottom:3px">🔒</div><p><strong>'+SN[S.stage]+'</strong> 단계에서는<br>AI 사용이 제한되어 있습니다.</p></div>';
+    return;
+  }
+  const topic=(document.getElementById('p-topic')||{}).value||S.topic||'';
+  const ex=topic?topic+'에 대해 찬반 논점 알려줘':'원자력 폐지 찬성 나라 알려줘';
+
+  const qbtnsHtml=QUICK[S.stage].map(function(q){
+    return '<button class="qbtn" onclick="sendQBtn(this)">'+esc(q)+'</button>';
+  }).join('');
+
+  body.innerHTML=
+    '<div class="ai-ok">✅ Claude AI — 자료조사·피드백 모두 가능</div>'+
+    '<div class="mtabs">'+
+      '<button class="mtab on" id="mt-chat" onclick="switchMode("chat")">💬 AI 대화</button>'+
+      '<button class="mtab" id="mt-guide" onclick="switchMode("guide")">📖 가이드</button>'+
+    '</div>'+
+    '<div id="mp-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">'+
+      '<div class="ai-msgs" id="ai-msgs">'+
+        '<div class="msg a"><div class="lbl">Claude AI</div>'+
+        '<strong>'+SN[S.stage]+'</strong> 단계입니다!<br><br>'+
+        '✅ 주제 자료조사, 피드백 무엇이든 질문하세요.<br>'+
+        '💡 예: <em>'+esc(ex)+'</em></div>'+
+      '</div>'+
+      '<div class="qbtns">'+qbtnsHtml+'</div>'+
+      '<div class="ai-in">'+
+        '<textarea id="ai-ta" placeholder="무엇이든 질문하세요…" rows="2"></textarea>'+
+        '<button class="send-btn" id="send-btn" onclick="sendAI()">▶</button>'+
+      '</div>'+
+    '</div>'+
+    '<div id="mp-guide" style="display:none;flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--ink2);line-height:1.9">'+
+      '<strong style="color:var(--ink);display:block;margin-bottom:8px">⚠️ AI 활용 주의사항</strong>'+
+      '① AI 답변을 그대로 복사하지 마세요.<br>'+
+      '② 반드시 <strong>자신의 말로 바꿔</strong> 쓰세요.<br>'+
+      '③ AI는 자료 제공 역할, 글의 주인은 여러분입니다.<br>'+
+      '④ AI 활용 내용을 <strong>AI 활용 반성</strong>란에 솔직히 적으세요.<br><br>'+
+      '<strong style="color:var(--ink);display:block;margin-bottom:6px">💡 효과적인 질문</strong>'+
+      '• "원자력 폐지 찬성 나라 3개국과 이유 알려줘"<br>'+
+      '• "내 글 논리적 오류 찾아줘"<br>'+
+      '• "이 문단 더 자연스럽게 고쳐줘"'+
+    '</div>';
+
+  const ta=document.getElementById('ai-ta');
+  if(ta)ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}});
+}
+
+function sendQBtn(btn){
+  const q=btn.textContent;
+  const topic=(document.getElementById('p-topic')||{}).value||S.topic||'이 주제';
+  const map={
+    '이 주제 자료조사 해줘':'"'+topic+'"에 대해 자료조사 해줘. 찬반 논점, 주요 사례, 관련 통계, 배경지식을 알려줘.',
+    '찬반 논점 정리해줘':'"'+topic+'"의 찬성 측과 반대 측 논점을 각각 3가지씩 구체적으로 정리해줘.',
+    '관련 사례·통계 알려줘':'"'+topic+'"와 관련된 구체적인 국가 사례, 통계, 최근 동향을 알려줘.',
+    '배경지식 설명해줘':'"'+topic+'"에 대한 배경지식과 역사적 맥락을 쉽게 설명해줘.'
+  };
+  const ta=document.getElementById('ai-ta');
+  if(ta){ta.value=map[q]||q;sendAI();}
+}
+
+function switchMode(m){
+  document.getElementById('mt-chat').classList.toggle('on',m==='chat');
+  document.getElementById('mt-guide').classList.toggle('on',m==='guide');
+  document.getElementById('mp-chat').style.display=m==='chat'?'flex':'none';
+  document.getElementById('mp-guide').style.display=m==='guide'?'block':'none';
+}
+
+function sendQ(q){
+  const topic=document.getElementById('p-topic')?.value||S.topic||'이 주제';
+  const map={
+    '이 주제 자료조사 해줘':'"'+topic+'"에 대해 자료조사 해줘. 찬반 논점, 주요 사례, 관련 통계, 배경지식을 알려줘.',
+    '찬반 논점 정리해줘':'"'+topic+'"의 찬성 측과 반대 측 논점을 각각 3가지씩 구체적으로 정리해줘.',
+    '관련 사례·통계 알려줘':'"'+topic+'"와 관련된 구체적인 국가 사례, 통계, 최근 동향을 알려줘.',
+    '배경지식 설명해줘':'"'+topic+'"에 대한 배경지식과 역사적 맥락을 쉽게 설명해줘.'
+  };
+  document.getElementById('ai-ta').value=map[q]||q;
+  sendAI();
+}
+
+async function sendAI(){
+  const ta=document.getElementById('ai-ta');
+  const text=ta.value.trim();if(!text)return;
+  ta.value='';
+  const msgs=document.getElementById('ai-msgs');
+  msgs.insertAdjacentHTML('beforeend','<div class="msg u">'+esc(text)+'</div>');
+  const tid='t'+Date.now();
+  msgs.insertAdjacentHTML('beforeend','<div class="typing" id="'+tid+'"><span></span><span></span><span></span></div>');
+  msgs.scrollTop=msgs.scrollHeight;
+  document.getElementById('send-btn').disabled=true;
+
+  const topic=document.getElementById('p-topic')?.value||S.topic||'';
+  const sys='너는 한국 학생의 글쓰기를 돕는 AI 교육 도우미다.\n현재 단계: "'+SN[S.stage]+'"'+(topic?' / 학생 주제: "'+topic+'"':'')+'\n지침:\n1. 주제 자료조사 요청 시 실제 정보(사례, 통계, 논점)를 충실히 제공해라\n2. 글쓰기 피드백도 성실히 해라\n3. 답변 끝에: "⚠️ 이 내용을 그대로 쓰지 말고 자신의 말로 바꿔 쓰세요!"\n4. 한국어로 500자 이내로 답해라';
+
+  let reply='',aiAnswer='';
+  try{
+    reply=await callClaude([{role:'user',content:text}],sys);
+    aiAnswer=reply;
+  }catch(e){
+    reply=e.message==='API_KEY_MISSING'?'⚠️ API 키가 없습니다. 오른쪽 위 입력창에 교사에게 받은 키를 입력해주세요.':'❌ AI 연결 오류: '+e.message;
+  }
+
+  if(!S.research[S.stage].aiQA)S.research[S.stage].aiQA=[];
+  S.research[S.stage].aiQA.push({q:text,a:aiAnswer.slice(0,200)});
+  updateSub({research:S.research});
+
+  document.getElementById(tid)?.remove();
+  msgs.insertAdjacentHTML('beforeend','<div class="msg a"><div class="lbl">Claude AI</div>'+esc(reply).split('\n').join('<br>')+'</div>');
+  msgs.scrollTop=msgs.scrollHeight;
+  document.getElementById('send-btn').disabled=false;
+}
+
+function toggleAI(){
+  S.aiOpen=!S.aiOpen;
+  document.getElementById('ai-col').classList.toggle('closed',!S.aiOpen);
+  document.getElementById('ai-body').style.display=S.aiOpen?'flex':'none';
+  document.getElementById('ai-tog-btn').textContent=S.aiOpen?'◀':'▶';
+}
+
+function openModal(t,b,cb){document.getElementById('mo-title').textContent=t;document.getElementById('mo-body').textContent=b;document.getElementById('mo-ok').onclick=cb;document.getElementById('ov').classList.add('show')}
+function closeModal(){document.getElementById('ov').classList.remove('show')}
+let _tt;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3000)}
+function esc(s){return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>')}
+
+STAGES.forEach(s=>{const el=document.getElementById('st-'+s);if(el)el.style.display='none'});
+document.getElementById('st-plan').style.display='flex';
+loadSettings();
+
+</script>
+<script>
+
+const KB_CODES = {
+  PCI: {label:'집단 탐구 추구', category:'탐구적 사고', color:'#3b82f6', desc:'공동 질문/문제 탐색'},
+  RRC: {label:'집단 탐구 조절', category:'탐구적 사고', color:'#60a5fa', desc:'반성·전략 수정·방향 기획'},
+  SRU_AI: {label:'AI 자원 공유', category:'정보 처리', color:'#f59e0b', desc:'AI 답변을 그대로 공유'},
+  SRU_H:  {label:'재해석 자원 공유', category:'정보 처리', color:'#10b981', desc:'AI 정보를 비판적으로 재구성'},
+  NCI: {label:'아이디어 협상', category:'정보 처리', color:'#06b6d4', desc:'관점 조정·합의점 탐색'},
+  EPU: {label:'수용 및 확장', category:'분석적 사고', color:'#8b5cf6', desc:'타인 아이디어 수용·발전'},
+  RMC: {label:'아이디어 점검', category:'분석적 사고', color:'#ec4899', desc:'작성 내용 비판적 검토'},
+  BJT: {label:'공동 이론 구축', category:'통합적 사고', color:'#f97316', desc:'아이디어 연결·체계화'},
+  CMA: {label:'메타인지 인식', category:'메타인지적 사고', color:'#64748b', desc:'자신의 이해·한계 성찰'},
+  'CMA-': {label:'미완결 메타인지', category:'미완결', color:'#94a3b8', desc:'막연한 어려움만 표출'},
+  'RMC-': {label:'미완결 점검', category:'미완결', color:'#94a3b8', desc:'구체적 분석 없이 비판'},
+};
+
+const DS = {
+  teamName: '',
+  members: [],
+  currentSpeaker: '',
+  utterances: [],
+  isRecording: false,
+  recognition: null,
+  currentTranscript: '',
+  speakerBuffer: '',
+  lastSpeakerChangeTime: null,
+  aiContext: '',
+  kodingResult: [],
+};
+
+function createDiscussionPanel() {
+  return `
+<div id="disc-panel" style="display:none;position:fixed;top:0;right:0;width:420px;height:100vh;background:var(--sf);border-left:1px solid var(--bd);z-index:200;display:flex;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,.12)">
+  <div style="background:var(--ink);color:#fff;padding:0 16px;height:48px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700">
+      <div id="rec-dot" style="width:8px;height:8px;border-radius:50%;background:#94a3b8"></div>
+      팀 토의 분석
+    </div>
+    <button onclick="toggleDiscPanel()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">×</button>
+  </div>
+
+  <!-- 탭 -->
+  <div style="display:flex;border-bottom:1px solid var(--bd);flex-shrink:0">
+    <button class="disc-tab on" id="dtab-record" onclick="switchDiscTab('record')" style="flex:1;padding:8px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--red);color:var(--red)">🎙️ 녹음·전사</button>
+    <button class="disc-tab" id="dtab-code" onclick="switchDiscTab('code')" style="flex:1;padding:8px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--ink3)">🔬 KB 코딩</button>
+    <button class="disc-tab" id="dtab-result" onclick="switchDiscTab('result')" style="flex:1;padding:8px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--ink3)">📊 결과</button>
+  </div>
+
+  <!-- 녹음·전사 탭 -->
+  <div id="dp-record" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px">
+
+    <!-- 팀 설정 -->
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">👥 팀 설정</div>
+      <input id="disc-team-name" placeholder="팀 이름 입력" style="width:100%;padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;margin-bottom:6px;outline:none">
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">발화자 이름 (Enter로 추가)</div>
+      <div style="display:flex;gap:5px;margin-bottom:6px">
+        <input id="disc-member-input" placeholder="이름 입력" style="flex:1;padding:6px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;outline:none" onkeydown="if(event.key==='Enter')addMember()">
+        <button onclick="addMember()" style="padding:6px 10px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer">추가</button>
+      </div>
+      <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+
+    <!-- 현재 발화자 선택 -->
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🎤 현재 발화자</div>
+      <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px">
+        <div style="font-size:11px;color:var(--ink3)">팀원을 추가하면 여기에 표시됩니다</div>
+      </div>
+    </div>
+
+    <!-- 녹음 컨트롤 -->
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🎙️ 녹음 제어</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button id="rec-btn" onclick="toggleRecording()" style="flex:1;padding:9px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">▶ 녹음 시작</button>
+        <button onclick="saveUtterance()" style="padding:9px 12px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer" title="현재 발화 저장">💾 저장</button>
+      </div>
+      <!-- 실시간 전사 표시 -->
+      <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--rs);padding:10px;min-height:60px;font-size:13px;color:var(--ink);line-height:1.7">
+        <div style="font-size:10px;color:var(--ink3);margin-bottom:4px">실시간 전사</div>
+        <div id="live-transcript" style="color:var(--ink2)">녹음을 시작하면 여기에 표시됩니다…</div>
+      </div>
+    </div>
+
+    <!-- 전사 목록 -->
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700">📝 발화 목록 (<span id="utt-count">0</span>개)</div>
+        <button onclick="clearUtterances()" style="padding:3px 8px;background:none;border:1px solid var(--bd);border-radius:4px;font-family:inherit;font-size:11px;cursor:pointer;color:var(--ink3)">초기화</button>
+      </div>
+      <div id="utt-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
+        <div style="font-size:11px;color:var(--ink3);text-align:center;padding:20px">아직 발화가 없습니다</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- KB 코딩 탭 -->
+  <div id="dp-code" style="display:none;flex:1;overflow-y:auto;padding:14px;flex-direction:column;gap:10px">
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 KB 자동 코딩</div>
+      <div style="font-size:11px;color:var(--ink2);margin-bottom:10px;line-height:1.6">
+        토의 종료 후 전체 발화를 이지영(2025) 분석틀로 자동 코딩합니다.<br>
+        <strong>PCI·RRC·SRU-AI·SRU-H·NCI·EPU·RMC·BJT·CMA</strong>
+      </div>
+      <button onclick="runKBCoding()" id="coding-btn" style="width:100%;padding:10px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔬 KB 자동 코딩 실행</button>
+    </div>
+    <div id="coding-progress" style="display:none;background:var(--bg);border-radius:var(--rs);padding:12px;text-align:center;font-size:12px;color:var(--ink2)">
+      Claude AI가 발화를 분석 중입니다…
+    </div>
+    <div id="coding-result-preview" style="display:none;background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">코딩 결과 미리보기</div>
+      <div id="coding-items" style="display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- 결과 탭 -->
+  <div id="dp-result" style="display:none;flex:1;overflow-y:auto;padding:14px;flex-direction:column;gap:10px">
+    <div id="result-summary" style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 담화 분석 요약</div>
+      <div id="result-charts" style="font-size:11px;color:var(--ink3)">코딩 완료 후 결과가 표시됩니다</div>
+    </div>
+    <button onclick="exportDiscCSV()" style="width:100%;padding:9px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📥 토의 데이터 CSV 다운로드</button>
+  </div>
+
+</div>`;
+}
+
+function addMember() {
+  const input = document.getElementById('disc-member-input');
+  const name = input.value.trim();
+  if (!name || DS.members.includes(name)) return;
+  DS.members.push(name);
+  input.value = '';
+  renderMemberTags();
+  renderSpeakerBtns();
+}
+
+function removeMember(name) {
+  DS.members = DS.members.filter(m => m !== name);
+  renderMemberTags();
+  renderSpeakerBtns();
+}
+
+function renderMemberTags() {
+  const el = document.getElementById('member-tags');
+  if (!el) return;
+  el.innerHTML = DS.members.map(m =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--ink);color:#fff;padding:3px 8px;border-radius:11px;font-size:11px">
+      ${m}<button onclick="removeMember('${m}')" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;padding:0;line-height:1">×</button>
+    </span>`
+  ).join('');
+}
+
+function renderSpeakerBtns() {
+  const el = document.getElementById('speaker-btns');
+  if (!el) return;
+  if (!DS.members.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--ink3)">팀원을 추가하면 여기에 표시됩니다</div>';
+    return;
+  }
+  el.innerHTML = DS.members.map(m =>
+    `<button onclick="selectSpeaker('${m}')" id="sp-btn-${m}" style="padding:5px 12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer;background:var(--sf);color:var(--ink);transition:all .15s">${m}</button>`
+  ).join('');
+}
+
+function selectSpeaker(name) {
+  if (DS.currentSpeaker && DS.speakerBuffer.trim()) {
+    saveUtterance();
+  }
+  DS.currentSpeaker = name;
+  document.querySelectorAll('[id^="sp-btn-"]').forEach(btn => {
+    btn.style.background = 'var(--sf)';
+    btn.style.borderColor = 'var(--bd)';
+    btn.style.color = 'var(--ink)';
+  });
+  const btn = document.getElementById('sp-btn-' + name);
+  if (btn) {
+    btn.style.background = 'var(--ink)';
+    btn.style.borderColor = 'var(--ink)';
+    btn.style.color = '#fff';
+  }
+}
+
+function toggleRecording() {
+  if (DS.isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해주세요.');
+    return;
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  DS.recognition = new SpeechRecognition();
+  DS.recognition.lang = 'ko-KR';
+  DS.recognition.continuous = true;
+  DS.recognition.interimResults = true;
+
+  DS.recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        final += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    if (final) DS.speakerBuffer += final;
+    const el = document.getElementById('live-transcript');
+    if (el) el.textContent = DS.speakerBuffer + (interim ? ' ' + interim + '…' : '');
+  };
+
+  DS.recognition.onerror = (e) => {
+    console.log('Speech recognition error:', e.error);
+    if (e.error !== 'no-speech') stopRecording();
+  };
+
+  DS.recognition.onend = () => {
+    if (DS.isRecording) DS.recognition.start(); // 자동 재시작
+  };
+
+  DS.recognition.start();
+  DS.isRecording = true;
+
+  const btn = document.getElementById('rec-btn');
+  const dot = document.getElementById('rec-dot');
+  if (btn) { btn.textContent = '⏹ 녹음 중지'; btn.style.background = 'var(--red)'; }
+  if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'blink 1s infinite'; }
+  toast('🎙️ 녹음 시작됨 — 발화자를 먼저 선택하세요');
+}
+
+function stopRecording() {
+  if (DS.recognition) DS.recognition.stop();
+  DS.isRecording = false;
+  if (DS.speakerBuffer.trim()) saveUtterance();
+  const btn = document.getElementById('rec-btn');
+  const dot = document.getElementById('rec-dot');
+  if (btn) { btn.textContent = '▶ 녹음 시작'; btn.style.background = 'var(--grn)'; }
+  if (dot) { dot.style.background = '#94a3b8'; dot.style.animation = 'none'; }
+  toast('⏹ 녹음 종료');
+}
+
+function saveUtterance() {
+  const text = DS.speakerBuffer.trim();
+  if (!text) return;
+  const utt = {
+    id: Date.now(),
+    speaker: DS.currentSpeaker || '미지정',
+    text,
+    time: new Date().toLocaleTimeString('ko-KR'),
+    code: null,
+    reason: null,
+  };
+  DS.utterances.push(utt);
+  DS.speakerBuffer = '';
+  const el = document.getElementById('live-transcript');
+  if (el) el.textContent = '다음 발화를 기다리는 중…';
+  renderUtteranceList();
+  const cnt = document.getElementById('utt-count');
+  if (cnt) cnt.textContent = DS.utterances.length;
+}
+
+function clearUtterances() {
+  if (!confirm('발화 목록을 초기화하시겠습니까?')) return;
+  DS.utterances = [];
+  DS.kodingResult = [];
+  renderUtteranceList();
+  const cnt = document.getElementById('utt-count');
+  if (cnt) cnt.textContent = 0;
+}
+
+function renderUtteranceList() {
+  const el = document.getElementById('utt-list');
+  if (!el) return;
+  if (!DS.utterances.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--ink3);text-align:center;padding:20px">아직 발화가 없습니다</div>';
+    return;
+  }
+  el.innerHTML = DS.utterances.map((u, i) => {
+    const codeInfo = u.code ? KB_CODES[u.code] : null;
+    return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:var(--ink)">${u.speaker}</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${codeInfo ? `<span style="font-size:10px;font-weight:700;color:#fff;background:${codeInfo.color};padding:1px 6px;border-radius:8px">${u.code}</span>` : ''}
+          <span style="font-size:10px;color:var(--ink3)">${u.time}</span>
+          <button onclick="deleteUtterance(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:12px;padding:0">×</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ink2);line-height:1.6">${u.text}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function deleteUtterance(idx) {
+  DS.utterances.splice(idx, 1);
+  renderUtteranceList();
+  const cnt = document.getElementById('utt-count');
+  if (cnt) cnt.textContent = DS.utterances.length;
+}
+
+async function runKBCoding() {
+  if (!DS.utterances.length) { toast('발화가 없습니다'); return; }
+
+  const btn = document.getElementById('coding-btn');
+  const progress = document.getElementById('coding-progress');
+  btn.disabled = true; btn.textContent = '분석 중…';
+  progress.style.display = 'block';
+
+  const aiAnswers = STAGES.flatMap(s => S.research[s].aiQA || []).map(qa => qa.a || '').join(' ');
+
+  const prompt = `당신은 협력적 글쓰기 담화 분석 전문가입니다.
+이지영(2025)의 협력적 글쓰기 상호작용 유형 분석틀로 아래 발화들을 코딩해주세요.
+
+[AI가 제공한 내용 (SRU-AI vs SRU-H 판별 기준)]:
+${aiAnswers.slice(0, 600) || '없음'}
+
+[코딩 체계]:
+- PCI: 집단 탐구 추구 — 공동 질문/문제를 탐색하는 발화 ("이 주제는 왜 중요할까?")
+- RRC: 집단 탐구 조절 — 팀 탐구 방향 반성·조정 ("우리 방향을 바꿔야 할 것 같아")
+- SRU-AI: AI 자원 공유 — AI 답변을 그대로 공유 ("AI가 이렇게 말했어")
+- SRU-H: 재해석 자원 공유 — AI 정보를 비판·재구성하여 공유 ("AI가 이렇게 말했는데 나는 다르게 봐")
+- NCI: 아이디어 협상 — 관점 조정·합의 탐색 ("너 의견도 좋지만 이것도 생각해봐")
+- EPU: 수용 및 확장 — 타인 아이디어 수용·발전 ("좋은 생각이네, 거기에 이것도 추가하면")
+- RMC: 아이디어 점검 — 작성 내용 비판적 검토 ("우리가 쓴 내용이 맞을까?")
+- BJT: 공동 이론 구축 — 아이디어 연결·체계화 ("이걸 연결하면 하나의 틀이 될 것 같아")
+- CMA: 메타인지 인식 — 자신의 이해·한계 성찰 ("어디서부터 써야 할지 모르겠어")
+- CMA-: 미완결 메타인지 — 막연한 어려움만 표출
+- RMC-: 미완결 점검 — 구체적 분석 없이 비판만
+
+[발화 목록]:
+${DS.utterances.map((u, i) => `${i + 1}. [${u.speaker}]: ${u.text}`).join('\n')}
+
+JSON 배열만 응답 (다른 텍스트 없이):
+[{"idx":0,"code":"코드","reason":"15자 이내 이유","aiRelated":true/false},...]
+
+aiRelated: 이 발화가 AI 정보와 관련된 발화인지 여부`;
+
+  try {
+    const key = S.apiKey || localStorage.getItem('wp_key') || '';
+    if (!key) throw new Error('API_KEY_MISSING');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: '담화 분석 전문가. JSON 배열만 응답.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const d = await res.json();
+    const raw = d.content.map(c => c.text || '').join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    parsed.forEach(item => {
+      if (DS.utterances[item.idx]) {
+        DS.utterances[item.idx].code = item.code;
+        DS.utterances[item.idx].reason = item.reason;
+        DS.utterances[item.idx].aiRelated = item.aiRelated;
+      }
+    });
+
+    DS.kodingResult = parsed;
+    renderUtteranceList();
+    renderCodingResult();
+    renderResultSummary();
+    switchDiscTab('result');
+    saveDiscussionData();
+    toast('✅ KB 자동 코딩 완료!');
+  } catch (e) {
+    toast('코딩 오류: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔬 KB 자동 코딩 실행';
+  progress.style.display = 'none';
+}
+
+function renderCodingResult() {
+  const el = document.getElementById('coding-result-preview');
+  const items = document.getElementById('coding-items');
+  if (!el || !items) return;
+  el.style.display = 'block';
+  items.innerHTML = DS.utterances.map(u => {
+    const info = u.code ? KB_CODES[u.code] : null;
+    return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700">${u.speaker}</span>
+        ${info ? `<span style="font-size:10px;font-weight:700;color:#fff;background:${info.color};padding:1px 8px;border-radius:8px">${u.code}: ${info.label}</span>` : ''}
+        ${u.aiRelated ? '<span style="font-size:10px;color:#f59e0b">AI관련</span>' : ''}
+      </div>
+      <div style="font-size:12px;color:var(--ink2)">${u.text.slice(0, 80)}${u.text.length > 80 ? '…' : ''}</div>
+      ${u.reason ? `<div style="font-size:11px;color:var(--ink3);margin-top:2px">→ ${u.reason}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderResultSummary() {
+  const el = document.getElementById('result-charts');
+  if (!el || !DS.utterances.length) return;
+
+  const total = DS.utterances.filter(u => u.code).length;
+  const counts = {};
+  DS.utterances.forEach(u => {
+    if (u.code) counts[u.code] = (counts[u.code] || 0) + 1;
+  });
+
+  const suAI = counts['SRU-AI'] || 0;
+  const suH = counts['SRU-H'] || 0;
+  const bjt = counts['BJT'] || 0;
+  const pci = counts['PCI'] || 0;
+
+  const categories = {
+    '탐구적 사고': (counts['PCI'] || 0) + (counts['RRC'] || 0),
+    '정보 처리': (counts['SRU-AI'] || 0) + (counts['SRU-H'] || 0) + (counts['NCI'] || 0),
+    '분석적 사고': (counts['EPU'] || 0) + (counts['RMC'] || 0),
+    '통합적 사고': counts['BJT'] || 0,
+    '메타인지': (counts['CMA'] || 0) + (counts['CMA-'] || 0) + (counts['RMC-'] || 0),
+  };
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--sf);border-radius:var(--rs);padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700">${total}</div>
+        <div style="font-size:10px;color:var(--ink3)">총 발화</div>
+      </div>
+      <div style="background:#fef3c7;border-radius:var(--rs);padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#92400e">${suAI}</div>
+        <div style="font-size:10px;color:#92400e">SRU-AI(그대로)</div>
+      </div>
+      <div style="background:#dcfce7;border-radius:var(--rs);padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#14532d">${suH}</div>
+        <div style="font-size:10px;color:#14532d">SRU-H(재해석)</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;margin-bottom:6px">범주별 분포</div>
+    ${Object.entries(categories).map(([cat, cnt]) => {
+      const pct = total ? Math.round(cnt / total * 100) : 0;
+      return `<div style="margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+          <span>${cat}</span><span>${cnt}회 (${pct}%)</span>
+        </div>
+        <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+          <div style="height:100%;background:var(--ink);border-radius:3px;width:${pct}%;transition:width .5s"></div>
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);font-size:11px;color:var(--ink2)">
+      AI 재해석 비율: <strong>${suAI + suH ? Math.round(suH / (suAI + suH) * 100) : 0}%</strong> (SRU-H/전체 SRU)<br>
+      최고 수준 담화(BJT): <strong>${bjt}회</strong> | 탐구 개시(PCI): <strong>${pci}회</strong>
+    </div>`;
+}
+
+function saveDiscussionData() {
+  const key = 'disc_' + S.name + '_' + Date.now();
+  const data = {
+    studentName: S.name,
+    topic: S.topic,
+    teamName: DS.teamName,
+    members: DS.members,
+    utterances: DS.utterances,
+    savedAt: new Date().toISOString(),
+  };
+  localStorage.setItem('disc_latest_' + S.name, JSON.stringify(data));
+}
+
+function exportDiscCSV() {
+  if (!DS.utterances.length) { toast('발화 데이터가 없습니다'); return; }
+  const H = ['순번', '발화자', '발화내용', 'KB코드', '코드명', '범주', '이유', 'AI관련', '시간'];
+  const rows = DS.utterances.map((u, i) => {
+    const info = u.code ? KB_CODES[u.code] : null;
+    return [
+      i + 1, u.speaker, u.text,
+      u.code || '', info ? info.label : '', info ? info.category : '',
+      u.reason || '', u.aiRelated ? 'Y' : 'N', u.time
+    ];
+  });
+  const csv = '\uFEFF' + [H, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `토의분석_${DS.teamName || S.name}_${new Date().toLocaleDateString('ko-KR').replace(/[\s.]/g, '')}.csv`;
+  a.click();
+  toast('📥 토의 분석 CSV 다운로드 완료');
+}
+
+function toggleDiscPanel() {
+  const panel = document.getElementById('disc-panel');
+  if (!panel) {
+    document.body.insertAdjacentHTML('beforeend', createDiscussionPanel());
+  } else {
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+  }
+}
+
+function switchDiscTab(tab) {
+  ['record', 'code', 'result'].forEach(t => {
+    const btn = document.getElementById('dtab-' + t);
+    const panel = document.getElementById('dp-' + t);
+    if (btn) {
+      btn.style.borderBottomColor = t === tab ? 'var(--red)' : 'transparent';
+      btn.style.color = t === tab ? 'var(--red)' : 'var(--ink3)';
+    }
+    if (panel) panel.style.display = t === tab ? 'flex' : 'none';
+  });
+}
+
+</script>
+</body>
+</html>
