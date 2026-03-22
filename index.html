@@ -1762,24 +1762,24 @@ function createDiscussionPanel() {
       <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
     </div>
 
-    <!-- 현재 발화자 = 본인 자동 -->
-    <div style="background:var(--grn-lt);border:1px solid #bbf7d0;border-radius:var(--rs);padding:10px 12px">
-      <div style="font-size:11px;color:var(--grn)">🎤 발화자: <strong id="auto-speaker-name">본인 이름 자동 설정</strong></div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">녹음 시작 후 말하고 저장 버튼을 누르세요</div>
-    </div>
-
-    <!-- 녹음 컨트롤 -->
+    <!-- 녹음 제어 (먼저) -->
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">🎙️ 녹음 제어</div>
-      <div style="display:flex;gap:6px;margin-bottom:8px">
-        <button id="rec-btn" onclick="toggleRecording()" style="flex:1;padding:9px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">▶ 녹음 시작</button>
-        <button onclick="saveUtterance()" style="padding:9px 12px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer" title="현재 발화 저장">💾 저장</button>
-      </div>
-      <!-- 실시간 전사 표시 -->
-      <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--rs);padding:10px;min-height:60px;font-size:13px;color:var(--ink);line-height:1.7">
+      <button id="rec-btn" onclick="toggleRecording()" style="width:100%;padding:10px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">▶ 녹음 시작</button>
+      <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--rs);padding:10px;min-height:60px;font-size:13px;color:var(--ink);line-height:1.7;margin-top:8px">
         <div style="font-size:10px;color:var(--ink3);margin-bottom:4px">실시간 전사</div>
         <div id="live-transcript" style="color:var(--ink2)">녹음을 시작하면 여기에 표시됩니다…</div>
       </div>
+    </div>
+
+    <!-- 발화자 선택 + 저장 (녹음 후) -->
+    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🎤 현재 발화자 선택</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">녹음 종료 후 방금 말한 사람을 선택하고 저장하세요</div>
+      <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--ink3)">팀원을 추가하면 여기에 표시됩니다</div>
+      </div>
+      <button onclick="saveUtterance()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
     </div>
 
     <!-- 전사 목록 -->
