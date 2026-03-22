@@ -235,6 +235,19 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
       <p id="forms-st" style="font-size:11px;color:var(--ink3);margin-top:5px">미설정</p>
     </div>
     <div class="tc">
+      <h3>🎙️ 팀 토의 발화 수집 &amp; KB 코딩</h3>
+      <p class="tc-sub">학생들이 저장한 발화를 수집하고 KB 자동 코딩합니다. 수업 종료 후 실행하세요.</p>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn-sm" onclick="loadAllUtterances()">🔄 발화 수집</button>
+        <button class="btn-sm" style="background:var(--pur);color:#fff;border-color:var(--pur)" onclick="runTeacherKBCoding()">🔬 KB 자동 코딩</button>
+        <button class="btn-sm grn" onclick="exportDiscAllCSV()">📥 발화 CSV</button>
+        <button class="btn-sm" onclick="clearAllUtterances()">🗑️ 초기화</button>
+      </div>
+      <div id="teacher-utt-summary" style="font-size:12px;color:var(--ink3);margin-bottom:8px">수집된 발화 없음</div>
+      <div id="teacher-utt-list" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+      <div id="teacher-kb-result" style="margin-top:10px"></div>
+    </div>
+    <div class="tc">
       <h3>🔬 연구 데이터</h3>
       <div id="res-summary" style="margin-bottom:12px"></div>
       <div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
@@ -465,6 +478,11 @@ function studentEnter(){
   initOutline();initStars();
   goStage('plan');renderAI();
   updateSub({stage:'plan'});
+  // 토의 발화자 본인 이름 자동 설정
+  DS.currentSpeaker=S.name;
+  DS.teamName=S.classCode;
+  const autoEl=document.getElementById('auto-speaker-name');
+  if(autoEl)autoEl.textContent=S.name;
   }catch(e){toast('오류: '+e.message);console.error(e);}
 }
 
@@ -524,6 +542,170 @@ function loadSettings(){
   if(forms){S.formsUrl=forms;const el=document.getElementById('forms-url');if(el)el.value=forms;const st=document.getElementById('forms-st');if(st)st.textContent='✅ 연동됨'}
   const key=localStorage.getItem('wp_key');
   if(key){S.apiKey=key;const el=document.getElementById('api-key-input');if(el){el.value=key;const st=document.getElementById('api-key-status');if(st)st.textContent='✅ 저장됨'}}
+}
+
+
+// ════════════════════════════════════
+// 교사 패널 — 팀 발화 수집 & KB 코딩
+// ════════════════════════════════════
+async function loadAllUtterances() {
+  const code = S.classCode || document.getElementById('cur-code')?.textContent || 'WRITE1';
+  const teamKey = 'disc_utterances_' + code;
+  try {
+    const r = await window.storage.get(teamKey, true);
+    if (!r) { toast('수집된 발화가 없습니다'); return; }
+    const all = JSON.parse(r.value);
+    // 시간순 정렬
+    all.sort((a,b) => (a.timestamp||0)-(b.timestamp||0));
+    // DS에 저장
+    DS.utterances = all;
+    renderTeacherUtteranceList(all);
+    toast('✅ '+all.length+'개 발화 수집 완료');
+  } catch(e) {
+    toast('수집 오류: '+e.message);
+  }
+}
+
+function renderTeacherUtteranceList(utts) {
+  const summary = document.getElementById('teacher-utt-summary');
+  const list = document.getElementById('teacher-utt-list');
+  if (!utts.length) {
+    if(summary) summary.textContent = '수집된 발화 없음';
+    return;
+  }
+  // 발화자별 통계
+  const speakers = {};
+  utts.forEach(u => speakers[u.speaker] = (speakers[u.speaker]||0)+1);
+  const statsStr = Object.entries(speakers).map(([k,v])=>k+': '+v+'회').join(' · ');
+  if(summary) summary.textContent = '총 '+utts.length+'개 발화 · '+statsStr;
+  if(!list) return;
+  list.innerHTML = utts.map((u,i) => {
+    const codeInfo = u.code ? KB_CODES[u.code] : null;
+    return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:7px 10px">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+      +'<span style="font-size:11px;font-weight:700">'+esc(u.speaker)+'</span>'
+      +'<span style="font-size:10px;color:var(--ink3)">'+esc(u.stage||'')+'</span>'
+      +(codeInfo?'<span style="font-size:10px;font-weight:700;color:#fff;background:'+codeInfo.color+';padding:1px 6px;border-radius:8px">'+u.code+'</span>':'')
+      +'<span style="font-size:10px;color:var(--ink3);margin-left:auto">'+esc(u.time||'')+'</span>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--ink2)">'+esc(u.text)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function runTeacherKBCoding() {
+  if (!DS.utterances.length) { await loadAllUtterances(); }
+  if (!DS.utterances.length) { toast('발화를 먼저 수집하세요'); return; }
+  const btn = document.querySelector('[onclick="runTeacherKBCoding()"]');
+  if(btn) { btn.textContent='분석 중…'; btn.disabled=true; }
+  const allQA = STAGES.flatMap(s=>S.research[s].aiQA||[]);
+  const aiAnswers = allQA.map(qa=>qa.a||'').join(' ');
+  // discussion.js의 runKBCoding 로직 재사용
+  const origUtts = DS.utterances;
+  try {
+    const key = S.apiKey || localStorage.getItem('wp_key') || '';
+    if (!key) throw new Error('API_KEY_MISSING');
+    const prompt = buildKBPrompt(aiAnswers);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:3000,
+        system:'담화 분석 전문가. JSON 배열만 응답.',
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const d = await res.json();
+    const raw = d.content.map(c=>c.text||'').join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    parsed.forEach(item => {
+      if(DS.utterances[item.idx]) {
+        DS.utterances[item.idx].code = item.code;
+        DS.utterances[item.idx].reason = item.reason;
+        DS.utterances[item.idx].aiRelated = item.aiRelated;
+      }
+    });
+    // 코딩된 결과 팀 저장소에 저장
+    const code = S.classCode || document.getElementById('cur-code')?.textContent || 'WRITE1';
+    await window.storage.set('disc_coded_'+code, JSON.stringify(DS.utterances), true);
+    renderTeacherUtteranceList(DS.utterances);
+    renderTeacherKBSummary();
+    toast('✅ KB 코딩 완료!');
+  } catch(e) {
+    toast('코딩 오류: '+e.message);
+  }
+  if(btn) { btn.textContent='🔬 KB 자동 코딩'; btn.disabled=false; }
+}
+
+function buildKBPrompt(aiAnswers) {
+  return '당신은 질적 연구자로서 이지영(2025)의 협력적 글쓰기 상호작용 유형 분석틀을 사용해 발화를 코딩합니다.\n\n━━━ 코딩의 핵심 원칙 ━━━\n코딩은 발화의 표면적 형식이 아니라 발화가 팀의 지식 구성 과정에서 수행하는 기능을 기준으로 판단합니다.\n발화 전체 내용을 읽고 이론적 정의에 비추어 가장 적합한 코드를 선택하세요.\n\n분석 단위: 발화자 turn 전체 = 하나의 분석 단위. 한 사람의 발화를 절대 쪼개지 마세요.\n\n━━━ 이론적 정의 ━━━\nPCI: 팀에게 아직 답이 없는 공동 질문·문제를 제기하여 집단 탐색을 유도\nRRC: 팀의 탐구 방향·전략을 반성하고 조정하는 메타적 발화\nSRU-AI: 이 수업 중 AI에서 얻은 정보를 해석 없이 팀에 공유 (aiRelated=true)\nSRU-H: AI정보나 외부 자료를 자신의 언어로 해석·재구성하여 공유\nNCI: 팀원 간 다른 의견을 조정하고 합의점을 찾는 발화\nEPU: 타인 발화를 수용하고 자신의 지식·경험으로 구체화·발전\nRMC: 팀이 생성한 아이디어·내용을 비판적으로 검토\nBJT: 여러 아이디어를 연결해 공동의 새로운 이론·체계를 형성 (최고 수준)\nCMA: 자신의 이해 상태·한계를 구체적으로 성찰\nCMA-: 막연한 어려움만 표출\nRMC-: 근거 없이 타인 비판만\n\naiRelated=true: 이 수업 AI에서 받은 정보 직접 언급·인용\naiRelated=false: 본인의 사전 지식·경험·추론\n\n━━━ AI 제공 내용 참고 ━━━\n'
+    + (aiAnswers.slice(0,800)||'없음')
+    + '\n\n━━━ 발화 목록 ━━━\n'
+    + DS.utterances.map((u,i)=>'['+i+'] '+u.speaker+': '+u.text).join('\n')
+    + '\n\nJSON 배열만 응답:\n[{"idx":0,"code":"코드","reason":"기능 20자 이내","aiRelated":true또는false},...]\n주의: 하나의 발화 turn = 하나의 JSON 객체';
+}
+
+function renderTeacherKBSummary() {
+  const el = document.getElementById('teacher-kb-result');
+  if (!el) return;
+  const coded = DS.utterances.filter(u=>u.code);
+  if (!coded.length) return;
+  const total = coded.length;
+  const counts = {};
+  coded.forEach(u=>counts[u.code]=(counts[u.code]||0)+1);
+  const suAI = counts['SRU-AI']||0;
+  const suH = counts['SRU-H']||0;
+  const bjt = counts['BJT']||0;
+  el.innerHTML = '<div style="background:var(--bg);border-radius:var(--rs);padding:10px;margin-top:6px">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 KB 코딩 결과 요약</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px;text-align:center">'
+    +'<div style="background:var(--sf);border-radius:4px;padding:6px"><div style="font-size:16px;font-weight:700">'+total+'</div><div style="color:var(--ink3)">총 발화</div></div>'
+    +'<div style="background:#fef3c7;border-radius:4px;padding:6px"><div style="font-size:16px;font-weight:700;color:#92400e">'+suAI+'</div><div style="color:#92400e">SRU-AI</div></div>'
+    +'<div style="background:#dcfce7;border-radius:4px;padding:6px"><div style="font-size:16px;font-weight:700;color:#14532d">'+suH+'</div><div style="color:#14532d">SRU-H</div></div>'
+    +'<div style="background:#fff7ed;border-radius:4px;padding:6px"><div style="font-size:16px;font-weight:700;color:#c2410c">'+bjt+'</div><div style="color:#c2410c">BJT</div></div>'
+    +'</div>'
+    +'<div style="margin-top:8px;font-size:11px;color:var(--ink2)">AI 재해석 비율: '+(suAI+suH?Math.round(suH/(suAI+suH)*100):0)+'% (SRU-H/전체SRU)</div>'
+    +'</div>';
+}
+
+async function clearAllUtterances() {
+  if (!confirm('수집된 발화를 초기화하시겠습니까?')) return;
+  const code = S.classCode || document.getElementById('cur-code')?.textContent || 'WRITE1';
+  try {
+    await window.storage.delete('disc_utterances_'+code, true);
+    await window.storage.delete('disc_coded_'+code, true);
+    DS.utterances = [];
+    const summary = document.getElementById('teacher-utt-summary');
+    const list = document.getElementById('teacher-utt-list');
+    const result = document.getElementById('teacher-kb-result');
+    if(summary) summary.textContent = '수집된 발화 없음';
+    if(list) list.innerHTML = '';
+    if(result) result.innerHTML = '';
+    toast('초기화됐습니다');
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+function exportDiscAllCSV() {
+  if (!DS.utterances.length) { toast('발화를 먼저 수집하세요'); return; }
+  const H = ['순번','발화자','단계','발화내용','KB코드','코드명','범주','이유','AI관련','시간'];
+  const rows = DS.utterances.map((u,i) => {
+    const info = u.code ? KB_CODES[u.code] : null;
+    return [i+1, u.speaker, u.stage||'', u.text,
+      u.code||'', info?info.label:'', info?info.category:'',
+      u.reason||'', u.aiRelated?'Y':'N', u.time||''];
+  });
+  const csv = '\uFEFF'+[H,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = '팀토의분석_'+new Date().toLocaleDateString('ko-KR').replace(/[\s.]/g,'')+'.csv';
+  a.click();
+  toast('📥 토의 분석 CSV 다운로드 완료');
 }
 
 function renderSubs(){
@@ -1072,8 +1254,9 @@ function renderAI(){
   body.innerHTML=
     '<div class="ai-ok">✅ Claude AI — 자료조사·피드백 모두 가능</div>'+
     '<div class="mtabs">'+
-      '<button class="mtab on" id="mt-chat" onclick="switchMode("chat")">💬 AI 대화</button>'+
-      '<button class="mtab" id="mt-guide" onclick="switchMode("guide")">📖 가이드</button>'+
+      '<button class="mtab on" id="mt-chat" onclick="switchMode(\'chat\')">💬 AI 대화</button>'+
+      '<button class="mtab" id="mt-team" onclick="switchMode(\'team\')">👥 팀 공유</button>'+
+      '<button class="mtab" id="mt-guide" onclick="switchMode(\'guide\')">📖 가이드</button>'+
     '</div>'+
     '<div id="mp-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">'+
       '<div class="ai-msgs" id="ai-msgs">'+
@@ -1088,7 +1271,56 @@ function renderAI(){
         '<button class="send-btn" id="send-btn" onclick="sendAI()">▶</button>'+
       '</div>'+
     '</div>'+
-    '<div id="mp-guide" style="display:none;flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--ink2);line-height:1.9">'+
+    '<div id="mp-team" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0">'+
+      '<div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px">'+
+        // 발화 녹음 섹션
+        '<div style="background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--rs);padding:12px;flex-shrink:0">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+            '<div id="my-rec-dot" style="width:7px;height:7px;border-radius:50%;background:#94a3b8"></div>'+
+            '<span style="font-size:12px;font-weight:700">내 발화 녹음</span>'+
+          '</div>'+
+          '<button id="my-rec-btn" onclick="toggleMyRec()" style="width:100%;padding:10px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">🎙️ 녹음 시작</button>'+
+          '<div id="my-live-txt" style="margin-top:8px;font-size:12px;color:var(--ink2);line-height:1.7;min-height:40px;padding:6px 8px;background:var(--sf);border-radius:var(--rs)">버튼을 눌러 녹음을 시작하세요</div>'+
+          // 발화자 선택 + 저장 (녹음 후)
+          '<div id="my-speaker-sel" style="display:none;margin-top:8px">'+
+            '<div style="font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:5px">💡 방금 말한 사람을 선택하고 저장하세요</div>'+
+            '<div id="my-spk-btns" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px"></div>'+
+            '<button onclick="saveMyUtterance()" style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장 (Enter)</button>'+
+          '</div>'+
+        '</div>'+
+        // 자료 공유 버튼
+        '<div style="display:flex;gap:5px;flex-shrink:0">'+
+          '<button onclick="shareMemoToTeam()" style="flex:1;padding:7px;background:var(--blu);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">📤 AI메모+개요 공유</button>'+
+          '<button onclick="renderTeamBoard()" style="padding:7px 10px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer">🔄</button>'+
+          '<button onclick="clearTeamBoard()" style="padding:7px 10px;background:none;border:1px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer">🗑️</button>'+
+        '</div>'+
+        '<div id="team-board-list"><div style="font-size:11px;color:var(--ink3);text-align:center;padding:20px">아직 공유된 자료가 없습니다</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div id="mp-team" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0">'+
+    '<div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px">'+
+      '<div style="background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--rs);padding:12px;flex-shrink:0">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+          '<div id="my-rec-dot" style="width:7px;height:7px;border-radius:50%;background:#94a3b8"></div>'+
+          '<span style="font-size:12px;font-weight:700">내 발화 녹음</span>'+
+        '</div>'+
+        '<button id="my-rec-btn" onclick="toggleMyRec()" style="width:100%;padding:10px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">🎙️ 녹음 시작</button>'+
+        '<div id="my-live-txt" style="margin-top:8px;font-size:12px;color:var(--ink2);min-height:40px;padding:6px 8px;background:var(--sf);border-radius:var(--rs);line-height:1.7">버튼을 눌러 녹음을 시작하세요</div>'+
+        '<div id="my-speaker-sel" style="display:none;margin-top:8px">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:5px">💡 방금 말한 사람을 선택하세요</div>'+
+          '<div id="my-spk-btns" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px"></div>'+
+          '<button onclick="saveMyUtterance()" style="width:100%;padding:8px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 저장 (Enter)</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:5px;flex-shrink:0">'+
+        '<button onclick="shareMemoToTeam()" style="flex:1;padding:7px;background:var(--blu);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">📤 AI메모+개요 공유</button>'+
+        '<button onclick="renderTeamBoard()" style="padding:7px 10px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer">🔄</button>'+
+        '<button onclick="clearTeamBoard()" style="padding:7px 10px;background:none;border:1px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer">🗑️</button>'+
+      '</div>'+
+      '<div id="team-board-list"><div style="font-size:11px;color:var(--ink3);text-align:center;padding:20px">아직 공유된 자료가 없습니다</div></div>'+
+    '</div>'+
+  '</div>'+
+  '<div id="mp-guide" style="display:none;flex:1;overflow-y:auto;padding:12px;font-size:12px;color:var(--ink2);line-height:1.9">'+
       '<strong style="color:var(--ink);display:block;margin-bottom:8px">⚠️ AI 활용 주의사항</strong>'+
       '① AI 답변을 그대로 복사하지 마세요.<br>'+
       '② 반드시 <strong>자신의 말로 바꿔</strong> 쓰세요.<br>'+
@@ -1122,7 +1354,7 @@ function switchMode(m){
     const btn=document.getElementById('mt-'+t);
     const panel=document.getElementById('mp-'+t);
     if(btn)btn.classList.toggle('on',m===t);
-    if(panel)panel.style.display=m===t?(t==='chat'?'flex':'block'):'none';
+    if(panel)panel.style.display=m===t?(t==='chat'||t==='team'?'flex':'block'):'none';
   });
   if(m==='team')renderTeamBoard();
 }
@@ -1175,6 +1407,170 @@ async function sendAI(){
 // ════════════════════════════════════════
 // 팀 공유 게시판
 // ════════════════════════════════════════
+
+// ════════════════════════════════════════
+// 개인 발화 녹음 → 팀 공유 게시판 자동 업로드
+// ════════════════════════════════════════
+const MyRec = {
+  recognition: null,
+  isRecording: false,
+  buffer: '',
+};
+
+function toggleMyRec() {
+  if (MyRec.isRecording) stopMyRec();
+  else startMyRec();
+}
+
+// Enter 키로 저장
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('my-speaker-sel')?.style.display !== 'none') {
+    e.preventDefault();
+    saveMyUtterance();
+  }
+});
+
+function startMyRec() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Chrome 브라우저를 사용해주세요');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  MyRec.recognition = new SR();
+  MyRec.recognition.lang = 'ko-KR';
+  MyRec.recognition.continuous = true;
+  MyRec.recognition.interimResults = true;
+
+  MyRec.recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) MyRec.buffer += final;
+    const el = document.getElementById('my-live-txt');
+    if (el) el.textContent = MyRec.buffer + (interim ? ' ' + interim + '…' : '');
+  };
+
+  MyRec.recognition.onerror = (e) => {
+    if (e.error !== 'no-speech') stopMyRec();
+  };
+
+  MyRec.recognition.onend = () => {
+    if (MyRec.isRecording) MyRec.recognition.start();
+  };
+
+  MyRec.recognition.start();
+  MyRec.isRecording = true;
+  MyRec.buffer = '';
+
+  const btn = document.getElementById('my-rec-btn');
+  const dot = document.getElementById('my-rec-dot');
+  if (btn) { btn.textContent = '⏹ 발화 종료'; btn.style.background = 'var(--red)'; }
+  if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'blink 1s infinite'; }
+
+  const el = document.getElementById('my-live-txt');
+  if (el) el.textContent = '말씀하세요…';
+}
+
+async function stopMyRec() {
+  if (MyRec.recognition) MyRec.recognition.stop();
+  MyRec.isRecording = false;
+
+  const btn = document.getElementById('my-rec-btn');
+  const dot = document.getElementById('my-rec-dot');
+  if (btn) { btn.textContent = '🎙️ 녹음 시작'; btn.style.background = 'var(--grn)'; }
+  if (dot) { dot.style.background = '#94a3b8'; dot.style.animation = 'none'; }
+
+  const text = MyRec.buffer.trim();
+  if (!text) { toast('발화 내용이 없습니다'); return; }
+
+  // 전사 내용 표시
+  const el = document.getElementById('my-live-txt');
+  if (el) el.textContent = text;
+
+  // 발화자 선택 UI 표시
+  renderSpeakerSelect();
+  const sel = document.getElementById('my-speaker-sel');
+  if (sel) sel.style.display = 'block';
+}
+
+function renderSpeakerSelect() {
+  const el = document.getElementById('my-spk-btns');
+  if (!el) return;
+  // 팀원 목록: DS.members 또는 현재 학생 이름만
+  const members = DS.members.length > 0 ? DS.members : [S.name];
+  MyRec.selectedSpeaker = S.name; // 기본값: 본인
+  el.innerHTML = members.map(m =>
+    '<button onclick="selectMySpeaker(\'' + m + '\')" id="mysp-' + m + '" style="padding:6px 14px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:13px;cursor:pointer;background:' + (m===S.name?'var(--ink)':'var(--sf)') + ';color:' + (m===S.name?'#fff':'var(--ink)') + '">' + m + '</button>'
+  ).join('');
+}
+
+function selectMySpeaker(name) {
+  MyRec.selectedSpeaker = name;
+  document.querySelectorAll('[id^="mysp-"]').forEach(btn => {
+    const isSelected = btn.id === 'mysp-' + name;
+    btn.style.background = isSelected ? 'var(--ink)' : 'var(--sf)';
+    btn.style.color = isSelected ? '#fff' : 'var(--ink)';
+  });
+}
+
+async function saveMyUtterance() {
+  const text = MyRec.buffer || document.getElementById('my-live-txt')?.textContent || '';
+  if (!text || text === '버튼을 눌러 녹음을 시작하세요') { toast('저장할 발화가 없습니다'); return; }
+  const speaker = MyRec.selectedSpeaker || S.name;
+
+  const item = {
+    id: Date.now(),
+    author: speaker,
+    stage: SN[S.stage] || S.stage,
+    question: '',
+    content: text,
+    time: new Date().toLocaleTimeString('ko-KR'),
+    type: '발화',
+    isUtterance: true,
+  };
+
+  try {
+    const teamKey = 'team_board_' + S.classCode;
+    let board = [];
+    try {
+      const r = await window.storage.get(teamKey, true);
+      if (r) board = JSON.parse(r.value);
+    } catch(e) {}
+    board.push(item);
+    if (board.length > 100) board = board.slice(-100);
+    await window.storage.set(teamKey, JSON.stringify(board), true);
+
+    // 초기화
+    MyRec.buffer = '';
+    const liveEl = document.getElementById('my-live-txt');
+    if (liveEl) liveEl.textContent = '버튼을 눌러 녹음을 시작하세요';
+    const sel = document.getElementById('my-speaker-sel');
+    if (sel) sel.style.display = 'none';
+
+    toast('✅ ' + speaker + '의 발화가 저장됐어요');
+    renderTeamBoard();
+  } catch(e) {
+    toast('저장 오류: ' + e.message);
+  }
+}
+
+// 팀 게시판에서 발화만 모아서 KB 코딩용 utterances 구성
+async function loadUtterancesFromBoard() {
+  try {
+    const teamKey = 'team_board_' + S.classCode;
+    const r = await window.storage.get(teamKey, true);
+    if (!r) return [];
+    const board = JSON.parse(r.value);
+    // 발화 타입만 필터링, 시간순 정렬
+    return board
+      .filter(item => item.isUtterance)
+      .sort((a, b) => a.id - b.id)
+      .map(item => ({ speaker: item.author, text: item.content, time: item.time, code: null, reason: null, aiRelated: null }));
+  } catch(e) { return []; }
+}
+
 async function shareToTeam(msgId, question) {
   const msgEl=document.getElementById(msgId);
   if(!msgEl)return;
@@ -1249,20 +1645,24 @@ async function renderTeamBoard() {
     el.innerHTML='<div style="font-size:11px;color:var(--ink3);text-align:center;padding:20px">아직 공유된 자료가 없습니다<br>AI 답변에서 "팀 공유" 버튼을 눌러보세요</div>';
     return;
   }
-  el.innerHTML=board.map(item=>`
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:6px">
+  el.innerHTML=board.map(item=>{
+    const isUtt=item.isUtterance;
+    const borderColor=isUtt?'var(--bd)':'#bfdbfe';
+    const typeColor=isUtt?'var(--ink3)':'var(--blu)';
+    const bg=isUtt?'var(--sf)':'#eff6ff';
+    return `<div style="background:${bg};border:1px solid ${borderColor};border-radius:var(--rs);padding:10px 12px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${isUtt?4:6}px">
+        <div style="display:flex;align-items:center;gap:5px">
           <span style="font-size:11px;font-weight:700;color:var(--ink)">${esc(item.author)}</span>
-          <span style="font-size:10px;background:var(--bg);padding:1px 6px;border-radius:8px;color:var(--ink3)">${esc(item.stage)}</span>
-          <span style="font-size:10px;color:${item.type==='AI답변'?'var(--blu)':'var(--grn)'}">${item.type}</span>
+          <span style="font-size:10px;padding:1px 6px;border-radius:8px;color:${typeColor};background:${isUtt?'var(--bg)':'#dbeafe'}">${isUtt?'🎙️ 발화':'📄 '+item.type}</span>
+          ${!isUtt?`<span style="font-size:10px;color:var(--ink3)">${esc(item.stage)}</span>`:''}
         </div>
         <span style="font-size:10px;color:var(--ink3)">${item.time}</span>
       </div>
-      ${item.question?`<div style="font-size:11px;color:var(--ink2);margin-bottom:4px">Q: ${esc(item.question)}</div>`:''}
+      ${item.question&&!isUtt?`<div style="font-size:11px;color:var(--ink2);margin-bottom:4px">Q: ${esc(item.question)}</div>`:''}
       <div style="font-size:12px;color:var(--ink);line-height:1.7;white-space:pre-wrap">${esc(item.content.slice(0,300))}${item.content.length>300?'…':''}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function clearTeamBoard(){
@@ -1362,12 +1762,10 @@ function createDiscussionPanel() {
       <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
     </div>
 
-    <!-- 현재 발화자 선택 -->
-    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🎤 현재 발화자</div>
-      <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px">
-        <div style="font-size:11px;color:var(--ink3)">팀원을 추가하면 여기에 표시됩니다</div>
-      </div>
+    <!-- 현재 발화자 = 본인 자동 -->
+    <div style="background:var(--grn-lt);border:1px solid #bbf7d0;border-radius:var(--rs);padding:10px 12px">
+      <div style="font-size:11px;color:var(--grn)">🎤 발화자: <strong id="auto-speaker-name">본인 이름 자동 설정</strong></div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:2px">녹음 시작 후 말하고 저장 버튼을 누르세요</div>
     </div>
 
     <!-- 녹음 컨트롤 -->
@@ -1544,14 +1942,16 @@ function stopRecording() {
   toast('⏹ 녹음 종료');
 }
 
-function saveUtterance() {
+async function saveUtterance() {
   const text = DS.speakerBuffer.trim();
   if (!text) return;
   const utt = {
     id: Date.now(),
-    speaker: DS.currentSpeaker || '미지정',
+    speaker: S.name || DS.currentSpeaker || '미지정',
     text,
     time: new Date().toLocaleTimeString('ko-KR'),
+    timestamp: Date.now(),
+    stage: SN[S.stage]||S.stage,
     code: null,
     reason: null,
   };
@@ -1562,6 +1962,21 @@ function saveUtterance() {
   renderUtteranceList();
   const cnt = document.getElementById('utt-count');
   if (cnt) cnt.textContent = DS.utterances.length;
+  // 팀 공유 저장소에 자동 업로드
+  await uploadUtteranceToTeam(utt);
+}
+
+async function uploadUtteranceToTeam(utt) {
+  try {
+    const teamKey = 'disc_utterances_' + S.classCode;
+    let all = [];
+    try { const r = await window.storage.get(teamKey, true); if(r) all = JSON.parse(r.value); } catch(e) {}
+    all.push(utt);
+    if(all.length > 200) all = all.slice(-200);
+    await window.storage.set(teamKey, JSON.stringify(all), true);
+  } catch(e) {
+    console.log('팀 업로드 오류:', e.message);
+  }
 }
 
 function clearUtterances() {
@@ -1605,7 +2020,15 @@ function deleteUtterance(idx) {
 }
 
 async function runKBCoding() {
-  if (!DS.utterances.length) { toast('발화가 없습니다'); return; }
+  // 팀 게시판에서 발화 불러오기 (각자 기기에서 올린 발화 통합)
+  const boardUtterances = await loadUtterancesFromBoard();
+  if (boardUtterances.length > 0) {
+    DS.utterances = boardUtterances;
+    renderUtteranceList();
+    const cnt = document.getElementById('utt-count');
+    if (cnt) cnt.textContent = DS.utterances.length;
+  }
+  if (!DS.utterances.length) { toast('발화가 없습니다. 팀원들이 발화를 공유했는지 확인해주세요'); return; }
 
   const btn = document.getElementById('coding-btn');
   const progress = document.getElementById('coding-progress');
