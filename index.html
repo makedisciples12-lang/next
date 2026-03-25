@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>글쓰기 학습터 v5</title>
+<title>글쓰기 학습터 v6</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -115,7 +115,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-sub{background:var(--grn);color:#fff;border-color:var(--grn);display:none}.btn-sub:hover{background:#15803d}
 .ai-col{width:360px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
 .ai-col.closed{width:44px}
-.ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;cursor:pointer}
+.ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ai-ht{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap}
 .ai-dot{width:6px;height:6px;background:#86efac;border-radius:50%;animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -156,39 +156,22 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
 @media(max-width:860px){.ai-col{width:300px}.g2{grid-template-columns:1fr}}
 @media(max-width:660px){
-  /* 모바일: 상하 분할 - AI가 위, 글쓰기가 아래 */
   .s-body{flex-direction:column}
   .wcol{flex:1;min-height:0;overflow:hidden}
-  .ai-col{
-    width:100% !important;
-    height:42px;
-    border-left:none;
-    border-top:1px solid var(--bd);
-    flex-shrink:0;
-    transition:height .25s;
-    order:-1; /* AI 패널을 위로 */
-  }
-  .ai-col.closed{height:42px}
-  .ai-col:not(.closed){height:45vh;min-height:200px}
-  /* 모바일에서 팀 토의 패널 */
-  #disc-panel{width:100% !important;max-height:50vh;overflow-y:auto}
-  /* 모바일 nav 글자 축소 */
+  .ai-col{width:100% !important;height:44px;border-left:none;border-top:1px solid var(--bd);flex-shrink:0;overflow:hidden;transition:height .3s}
+  .ai-col.closed{height:44px !important}
+  .ai-col:not(.closed){height:50vh !important;min-height:240px}
+  .ai-col:not(.closed) #ai-body{display:flex !important;flex-direction:column;overflow:hidden;height:calc(50vh - 44px)}
+  .ai-msgs{flex:1 !important;overflow-y:auto;min-height:0}
+  .qbtns,.mtabs,.ai-ok,.ai-in{flex-shrink:0 !important}
   .snav{font-size:10px;padding:4px 7px}
   .snav-wrap{gap:1px}
-  /* 계획하기 3열 → 1열 */
-  #st-plan .wscroll > div[style*="grid-template-columns:1fr 1fr 1fr"]{
-    grid-template-columns:1fr !important;
-  }
-  /* 개요 3열 → 1열 */
   #ol-wrap{grid-template-columns:1fr !important}
-  /* 초고 분할 → 세로 */
-  #st-draft > div[style*="display:flex"]{flex-direction:column}
-  #st-draft > div > div[style*="width:230px"]{width:100%;height:120px;border-right:none;border-bottom:1px solid var(--bd)}
+  #st-draft > div[style*="display:flex"]{flex-direction:column !important}
+  #st-draft > div > div[style*="width:230px"]{width:100% !important;height:100px;border-right:none;border-bottom:1px solid var(--bd)}
+  #disc-panel{position:fixed !important;top:0;left:0;right:0;bottom:0;width:100% !important;height:100% !important;z-index:200;overflow-y:auto}
 }
-@media(max-width:400px){
-  .snav{font-size:9px;padding:3px 5px}
-  .s-logo{font-size:12px}
-}
+@media(max-width:400px){.snav{font-size:9px;padding:3px 5px}.s-logo{font-size:12px}}
 </style>
 </head>
 <body>
@@ -198,7 +181,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
   <div class="brand">
     <div class="brand-ico">✍️</div>
     <h1>글쓰기 학습터</h1>
-    <p>AI 활용 글쓰기 연구 플랫폼 v5</p>
+    <p>AI 활용 협력 글쓰기 연구 플랫폼 v6</p>
   </div>
   <div class="card">
     <div class="tabs">
@@ -421,7 +404,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 
     <!-- AI -->
     <aside class="ai-col" id="ai-col">
-      <div class="ai-head" onclick="toggleAI()">
+      <div class="ai-head" onclick="toggleAI()" style="cursor:pointer">
         <div class="ai-ht"><div class="ai-dot"></div>AI 도우미</div>
         <button class="ai-tog" id="ai-tog-btn" style="pointer-events:none">◀</button>
       </div>
@@ -455,12 +438,7 @@ const S={
 
 async function callClaude(messages,system,maxTok=1000){
   let key=S.apiKey||localStorage.getItem('wp_key')||'';
-  if(!key){
-    try{
-      const r=await window.storage.get('apikey_'+S.classCode,true);
-      if(r&&r.value){key=r.value;S.apiKey=key;localStorage.setItem('wp_key',key);}
-    }catch(e){}
-  }
+  if(!key){try{const r=await window.storage.get('apikey_'+S.classCode,true);if(r&&r.value){key=r.value;S.apiKey=key;localStorage.setItem('wp_key',key);}}catch(e){}}
   if(!key)throw new Error('API_KEY_MISSING');
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -502,12 +480,7 @@ function studentEnter(){
   loadSettings();
   show('pg-student');
   initOutline();initStars();
-  // 교사가 공유한 API 키 자동 로드
-  if(!S.apiKey&&!localStorage.getItem('wp_key')){
-    window.storage.get('apikey_'+S.classCode,true).then(r=>{
-      if(r&&r.value){S.apiKey=r.value;localStorage.setItem('wp_key',r.value);}
-    }).catch(()=>{});
-  }
+  if(!S.apiKey&&!localStorage.getItem('wp_key')){window.storage.get('apikey_'+S.classCode,true).then(r=>{if(r&&r.value){S.apiKey=r.value;localStorage.setItem('wp_key',r.value);}}).catch(()=>{});}
   goStage('plan');renderAI();
   updateSub({stage:'plan'});
   }catch(e){toast('오류: '+e.message);console.error(e);}
@@ -524,14 +497,7 @@ async function saveApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim();
   if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키 형식이 아닙니다 (sk-ant-... 로 시작)');return}
   S.apiKey=k;localStorage.setItem('wp_key',k);
-  try{
-    await window.storage.set('apikey_'+S.classCode,k,true);
-    document.getElementById('api-key-status').textContent='✅ 저장됨 — 학생들과 자동 공유됩니다';
-    toast('✅ API 키 저장 완료! 같은 코드 학생들이 자동으로 AI를 사용할 수 있습니다');
-  }catch(e){
-    document.getElementById('api-key-status').textContent='✅ 저장됨';
-    toast('✅ API 키 저장됨');
-  }
+  try{await window.storage.set('apikey_'+S.classCode,k,true);document.getElementById('api-key-status').textContent='✅ 저장됨 — 학생 자동 공유';toast('✅ API 키 저장 완료! 학생들도 자동으로 AI 사용 가능합니다');}catch(e){document.getElementById('api-key-status').textContent='✅ 저장됨';toast('✅ API 키 저장됨');}
 }
 async function testApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim()||S.apiKey;
@@ -670,7 +636,7 @@ function goStage(s){
   });
   if(s==='revise')syncRevise();
   if(s==='draft')updateOLPreview();
-  renderAI();initAIForMobile();updateBottom();updateSub({stage:s});
+  renderAI();updateBottom();updateSub({stage:s});
 }
 function nextStage(){const i=STAGES.indexOf(S.stage);if(i<STAGES.length-1){S.done[S.stage]=true;goStage(STAGES[i+1])}updateDots()}
 function prevStage(){const i=STAGES.indexOf(S.stage);if(i>0)goStage(STAGES[i-1])}
@@ -1250,21 +1216,14 @@ async function sendAI(){
 
 function toggleAI(){
   S.aiOpen=!S.aiOpen;
-  document.getElementById('ai-col').classList.toggle('closed',!S.aiOpen);
-  document.getElementById('ai-body').style.display=S.aiOpen?'flex':'none';
-  document.getElementById('ai-tog-btn').textContent=S.aiOpen?'▼':'▲';
-}
-function initAIForMobile(){
-  // 모바일(660px 이하)에서는 AI 패널 처음에 닫힌 상태
-  if(window.innerWidth<=660){
-    S.aiOpen=false;
-    const col=document.getElementById('ai-col');
-    if(col)col.classList.add('closed');
-    const body=document.getElementById('ai-body');
-    if(body)body.style.display='none';
-    const btn=document.getElementById('ai-tog-btn');
-    if(btn)btn.textContent='▲';
-  }
+  const col=document.getElementById('ai-col');
+  const body=document.getElementById('ai-body');
+  const btn=document.getElementById('ai-tog-btn');
+  if(!col)return;
+  col.classList.toggle('closed',!S.aiOpen);
+  if(body)body.style.display=S.aiOpen?'flex':'none';
+  if(btn)btn.textContent=S.aiOpen?'▼':'▲';
+  if(S.aiOpen&&window.innerWidth<=660){setTimeout(()=>{col.scrollIntoView({behavior:'smooth',block:'end'});},300);}
 }
 
 function openModal(t,b,cb){document.getElementById('mo-title').textContent=t;document.getElementById('mo-body').textContent=b;document.getElementById('mo-ok').onclick=cb;document.getElementById('ov').classList.add('show')}
@@ -1359,7 +1318,7 @@ function createDiscussionPanel() {
       <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
         <div style="font-size:11px;color:var(--ink3)">팀원을 먼저 추가하세요</div>
       </div>
-      <button onclick="saveAndReset()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
+      <button onclick="saveUtterance()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
     </div>
 
     <!-- 발화 목록 -->
@@ -1412,44 +1371,10 @@ function toggleDiscPanel() {
     const cnt = document.getElementById('utt-count');
     if (cnt) cnt.textContent = DS.utterances.length;
   }
-  const hidden = panel.style.display === 'none' || panel.style.display === '';
-  if (hidden) {
-    panel.style.display = 'flex';
-    panel.style.flexDirection = 'column';
-    _applyDiscPanelMobile(panel);
-  } else {
-    panel.style.display = 'none';
-  }
+  const hidden = panel.style.display === 'none' || !panel.style.display;
+  panel.style.display = hidden ? 'flex' : 'none';
+  if (hidden) panel.style.flexDirection = 'column';
 }
-
-// 모바일에서 팀토의 패널: fixed 전체화면 오버레이
-function _applyDiscPanelMobile(panel) {
-  if (!panel) return;
-  if (window.innerWidth <= 660) {
-    // 모바일: 전체화면 오버레이
-    panel.style.position = 'fixed';
-    panel.style.top = '0';
-    panel.style.left = '0';
-    panel.style.right = '0';
-    panel.style.bottom = '0';
-    panel.style.width = '100%';
-    panel.style.height = '100%';
-    panel.style.zIndex = '200';
-    panel.style.overflowY = 'auto';
-  } else {
-    // PC: 인라인 패널
-    panel.style.position = '';
-    panel.style.top = '';
-    panel.style.left = '';
-    panel.style.right = '';
-    panel.style.bottom = '';
-    panel.style.width = '380px';
-    panel.style.height = '';
-    panel.style.zIndex = '';
-    panel.style.overflowY = '';
-  }
-}
-
 
 function switchDiscTab(tab) {
   ['record','code','result'].forEach(t => {
@@ -1520,67 +1445,42 @@ function toggleRecording() {
 
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    // iOS Safari는 Web Speech API 미지원 → 직접 입력 안내
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
-      toast('아이폰/아이패드는 음성 인식이 지원되지 않습니다.\n아래 직접 입력창을 이용해주세요.');
-    } else {
-      toast('Chrome 또는 Samsung Internet 브라우저를 사용해주세요.');
-    }
+    toast(isIOS ? '아이폰/아이패드는 음성 인식이 지원되지 않습니다.\n아래 팀원 이름 옆 직접 입력을 이용해주세요.' : 'Chrome 또는 Samsung Internet 브라우저를 사용해주세요.');
     return;
   }
-
-  // 마이크 권한 확인
   if (navigator.permissions) {
     navigator.permissions.query({name:'microphone'}).then(r => {
-      if (r.state === 'denied') {
-        toast('마이크 권한이 차단됐습니다.\n주소창 왼쪽 자물쇠 → 마이크 → 허용 후 새로고침하세요.');
-      } else {
-        _startRec();
-      }
-    }).catch(() => _startRec());
-  } else {
-    _startRec();
-  }
+      if (r.state === 'denied') { toast('마이크 권한이 차단됐습니다.\n주소창 자물쇠 → 마이크 → 허용 후 새로고침하세요.'); return; }
+      _doRec();
+    }).catch(() => _doRec());
+  } else { _doRec(); }
 }
 
-function _startRec() {
-  // 이미 녹음 중이면 중복 시작 방지
+function _doRec() {
   if (DS.isRecording) return;
-
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  // ── 핵심: 세션 ID로 중복 전사 방지 ──
-  // 모바일 WebKit은 recognition.start() 재호출 시
-  // 이전 세션 결과를 다시 전송하는 버그가 있음
-  // → 각 세션에 고유 ID 부여, 다른 세션 결과 무시
-  const sessionId = Date.now();
-  DS._sessionId = sessionId;
-  DS._seenFinals = new Set(); // 이미 처리한 final 텍스트 추적
+  // 세션 ID: 재시작 시 이전 결과 재전송 방지 (모바일 WebKit 버그 대응)
+  const sid = Date.now();
+  DS._sid = sid;
+  DS._seen = new Set();
 
   DS.recognition = new SR();
   DS.recognition.lang = 'ko-KR';
-  DS.recognition.continuous = false;  // 모바일 호환: false
+  DS.recognition.continuous = true;   // 연속 인식 (말 잘림 방지)
   DS.recognition.interimResults = true;
   DS.recognition.maxAlternatives = 1;
 
   DS.recognition.onresult = e => {
-    // 이 이벤트가 현재 활성 세션 것인지 확인
-    if (DS._sessionId !== sessionId) return;
-
+    if (DS._sid !== sid) return; // 다른 세션 결과 무시
     let interim = '', newFinal = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      const transcript = e.results[i][0].transcript;
+      const t = e.results[i][0].transcript;
       if (e.results[i].isFinal) {
-        const key = transcript.trim();
-        // 이미 처리한 텍스트면 무시 (중복 방지 핵심)
-        if (key && !DS._seenFinals.has(key)) {
-          DS._seenFinals.add(key);
-          newFinal += transcript;
-        }
-      } else {
-        interim += transcript;
-      }
+        const key = t.trim();
+        if (key && !DS._seen.has(key)) { DS._seen.add(key); newFinal += t; }
+      } else { interim += t; }
     }
     if (newFinal) DS.speakerBuffer += newFinal;
     const el = document.getElementById('live-transcript');
@@ -1589,18 +1489,16 @@ function _startRec() {
 
   DS.recognition.onerror = e => {
     if (e.error === 'not-allowed' || e.error === 'permission-denied') {
-      toast('마이크 권한을 허용해주세요.\n주소창 자물쇠 아이콘 → 마이크 → 허용');
-      stopRecording(); return;
+      toast('마이크 권한을 허용해주세요.\n주소창 자물쇠 → 마이크 → 허용');
+      stopRecording();
     }
-    // no-speech, aborted, network 등은 자동 재시작
+    // no-speech 등은 onend에서 자동 재시작
   };
 
   DS.recognition.onend = () => {
-    if (!DS.isRecording || DS._sessionId !== sessionId) return;
-    // 100ms 딜레이: 모바일에서 즉시 재시작 시 오류 방지
-    setTimeout(() => {
-      if (DS.isRecording) _startRec();
-    }, 150);
+    if (!DS.isRecording) return;
+    // 재시작 시 새 세션으로 (이전 결과 재전송 차단)
+    setTimeout(() => { if (DS.isRecording) _doRec(); }, 200);
   };
 
   try {
@@ -1613,19 +1511,14 @@ function _startRec() {
     toast('🎙️ 녹음 중 — 말씀하세요');
   } catch(err) {
     DS.isRecording = false;
-    toast('녹음 시작 실패. ' + err.message);
+    toast('녹음 시작 실패: ' + err.message);
   }
 }
 
 function stopRecording() {
-  DS.isRecording = false;     // onend 재시작 막기 먼저
-  DS._sessionId = null;       // 세션 무효화
-  try {
-    if (DS.recognition) {
-      DS.recognition.abort(); // stop()보다 즉시 종료
-      DS.recognition = null;
-    }
-  } catch(e) {}
+  DS.isRecording = false; // onend 재시작 차단 먼저
+  DS._sid = null;
+  try { if (DS.recognition) { DS.recognition.abort(); DS.recognition = null; } } catch(e) {}
   const btn = document.getElementById('rec-btn');
   const dot = document.getElementById('rec-dot');
   if (btn) { btn.textContent = '▶ 녹음 시작'; btn.style.background = 'var(--grn)'; }
@@ -1633,31 +1526,9 @@ function stopRecording() {
   toast('⏹ 녹음 종료 — 발화자를 선택하고 저장하세요');
 }
 
-function saveAndReset() {
-  // 녹음 중이어도 현재까지 전사된 내용으로 저장
-  // live-transcript에서 interim 포함 텍스트 가져오기
-  const liveEl = document.getElementById('live-transcript');
-  if (liveEl && DS.isRecording) {
-    const liveText = liveEl.textContent.replace('…','').trim();
-    if (liveText && liveText !== '녹음 시작 버튼을 누르세요') {
-      // interim 포함 텍스트를 버퍼에 반영
-      DS.speakerBuffer = liveText;
-    }
-  }
-  saveUtterance();
-}
-
 function saveUtterance() {
-  // speakerBuffer 우선, 없으면 live-transcript에서 가져오기
-  let text = DS.speakerBuffer.trim();
-  if (!text) {
-    const liveEl = document.getElementById('live-transcript');
-    if (liveEl) {
-      const liveText = liveEl.textContent.replace('녹음 시작 버튼을 누르세요','').replace('저장됐습니다. 다음 녹음을 시작하세요','').replace('…','').trim();
-      if (liveText) text = liveText;
-    }
-  }
-  if (!text) { toast('저장할 발화가 없습니다. 먼저 녹음 후 말씀하세요.'); return; }
+  const text = DS.speakerBuffer.trim();
+  if (!text) { toast('저장할 발화가 없습니다'); return; }
   if (!DS.currentSpeaker) { toast('발화자를 먼저 선택하세요'); return; }
   DS.utterances.push({
     id: Date.now(),
