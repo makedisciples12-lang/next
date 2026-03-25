@@ -1581,51 +1581,60 @@ function toggleRecording() {
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     const isIOS=/iP(ad|hone|od)/.test(navigator.userAgent);
-    toast(isIOS?'아이폰/아이패드 Safari는 음성 인식 미지원\n아래 직접 입력창을 사용하세요':'Chrome/Samsung Internet 브라우저를 사용해주세요');
+    toast(isIOS ? '아이폰/아이패드는 음성 인식 미지원. 아래 직접 입력창을 사용하세요.' : '이 브라우저는 음성 인식 미지원. Chrome을 사용해주세요.');
     return;
   }
   if(DS.isRecording) return;
-  // 중복 방지용 전역 Set 초기화
+
+  const isMobile=/Android|Mobile/i.test(navigator.userAgent)&&!/iPad/.test(navigator.userAgent);
+  // 갤럭시 패드 등 태블릿도 포함
+  const isTablet=/Android/i.test(navigator.userAgent)&&!/Mobile/i.test(navigator.userAgent);
+  const useMobileMode=isMobile||isTablet;
+
   DS._seen=new Set();
   DS._recActive=true;
-  _recLoop();
+  DS._useMobile=useMobileMode;
+
+  if(useMobileMode){
+    // 모바일/태블릿: continuous=false + 중복 방지
+    _recLoopMobile();
+  } else {
+    // PC/노트북: continuous=true 자연스러운 녹음
+    _recStartPC();
+  }
 }
 
-function _recLoop(){
-  if(!DS._recActive) return;
+function _recStartPC(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const rec=new SR();
   rec.lang='ko-KR';
-  rec.continuous=false;      // false: 모바일 중복 전사 방지 핵심
+  rec.continuous=true;   // PC: 멈춤 없이 연속 인식
   rec.interimResults=true;
-  rec.maxAlternatives=1;
   DS.recognition=rec;
 
   rec.onresult=e=>{
     let interim='',newFinal='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const txt=e.results[i][0].transcript;
-      if(e.results[i].isFinal){
-        // 공백 제거 키로 중복 체크
-        const key=txt.replace(/\s/g,'');
-        if(key&&!DS._seen.has(key)){DS._seen.add(key);newFinal+=txt;}
-      } else {interim+=txt;}
+      if(e.results[i].isFinal) newFinal+=txt;
+      else interim+=txt;
     }
     if(newFinal) DS.speakerBuffer+=newFinal;
     const el=document.getElementById('live-transcript');
-    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'…':'');
+    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
   };
 
   rec.onerror=e=>{
     if(e.error==='not-allowed'||e.error==='permission-denied'){
-      toast('마이크 권한을 허용해주세요\n주소창 자물쇠 → 마이크 → 허용');
+      toast('마이크 권한을 허용해주세요');
       stopRecording();
     }
-    // no-speech 등은 onend에서 재시작
   };
 
   rec.onend=()=>{
-    if(DS._recActive){setTimeout(_recLoop,120);}
+    if(DS._recActive&&!DS._useMobile){
+      try{rec.start();}catch(e){setTimeout(_recStartPC,300);}
+    }
   };
 
   try{
@@ -1635,16 +1644,62 @@ function _recLoop(){
     const dot=document.getElementById('rec-dot');
     if(btn){btn.textContent='⏹ 녹음 종료';btn.style.background='var(--red)';}
     if(dot){dot.style.background='#ef4444';dot.style.animation='blink 1s infinite';}
-    toast('🎙️ 녹음 중 — 말씀하세요');
+    toast('녹음 중 — 자유롭게 말씀하세요');
   }catch(err){
     DS.isRecording=false;DS._recActive=false;
     toast('녹음 시작 실패: '+err.message);
   }
 }
 
+function _recLoopMobile(){
+  if(!DS._recActive) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();
+  rec.lang='ko-KR';
+  rec.continuous=false;  // 모바일: 중복 방지
+  rec.interimResults=true;
+  DS.recognition=rec;
+
+  rec.onresult=e=>{
+    let interim='',newFinal='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const txt=e.results[i][0].transcript;
+      if(e.results[i].isFinal){
+        const key=txt.trim().split('').sort().join('');
+        if(key&&!DS._seen.has(key)){DS._seen.add(key);newFinal+=txt;}
+      } else {interim+=txt;}
+    }
+    if(newFinal) DS.speakerBuffer+=newFinal;
+    const el=document.getElementById('live-transcript');
+    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
+  };
+
+  rec.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='permission-denied'){
+      toast('마이크 권한을 허용해주세요');
+      stopRecording();
+    }
+  };
+
+  rec.onend=()=>{if(DS._recActive) setTimeout(_recLoopMobile,100);};
+
+  try{
+    rec.start();
+    DS.isRecording=true;
+    const btn=document.getElementById('rec-btn');
+    const dot=document.getElementById('rec-dot');
+    if(btn){btn.textContent='⏹ 녹음 종료';btn.style.background='var(--red)';}
+    if(dot){dot.style.background='#ef4444';dot.style.animation='blink 1s infinite';}
+  }catch(err){
+    DS.isRecording=false;DS._recActive=false;
+  }
+}
+
+
 function stopRecording() {
   DS._recActive=false;
   DS.isRecording=false;
+  DS._mobileWarned=false; // 다음 녹음 시 경고 초기화
   try{if(DS.recognition){DS.recognition.abort();DS.recognition=null;}}catch(e){}
   const btn=document.getElementById('rec-btn');
   const dot=document.getElementById('rec-dot');
