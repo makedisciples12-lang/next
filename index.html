@@ -298,8 +298,8 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
       </div>
       <div style="overflow-x:auto">
         <table class="dtbl">
-          <thead><tr><th></th><th>이름</th><th>주제</th><th>단계</th><th>계획</th><th>개요</th><th>초고</th><th>최종</th><th>글자변화</th><th>AI질문</th><th>AI↔최종유사도</th><th>지식수준</th><th>글질평가</th><th>제출</th></tr></thead>
-          <tbody id="sub-tbody"><tr><td colspan="14" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr></tbody>
+          <thead><tr><th></th><th>이름</th><th>주제</th><th>단계</th><th>계획</th><th>개요</th><th>초고</th><th>최종</th><th>글자변화</th><th>AI질문</th><th>AI↔최종유사도</th><th>지식수준</th><th>글질평가</th><th>팀토의</th><th>제출</th></tr></thead>
+          <tbody id="sub-tbody"><tr><td colspan="15" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -621,7 +621,7 @@ function renderSubs(){
     sum.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">${[['총학생',data.length],['제출완료',data.filter(r=>r.submitted).length],['평균AI질문',avgQ+'회'],['KL분석',data.filter(r=>r.kl).length]].map(([l,v])=>`<div style="background:var(--bg);border-radius:var(--rs);padding:10px;text-align:center"><div style="font-size:20px;font-weight:700">${v}</div><div style="font-size:10px;color:var(--ink2)">${l}</div></div>`).join('')}</div>`;
   }
   const tbody=document.getElementById('sub-tbody');
-  if(!data.length){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr>';return}
+  if(!data.length){tbody.innerHTML='<tr><td colspan="15" style="text-align:center;color:var(--ink3);padding:22px">없음</td></tr>';return}
   tbody.innerHTML=data.map((r,i)=>{
     const tq=STAGES.reduce((a,s)=>a+(r.research?.[s]?.aiQA?.length||0),0);
     const dc=r.research?.draft?.chars||0,rc=r.research?.revise?.chars||0;
@@ -642,9 +642,10 @@ function renderSubs(){
       <td>${r.similarity!=null?r.similarity+'%':'--'}</td>
       <td>${klk?`<span class="bdg b-${klk}">Knowledge ${klk}</span>`:'--'}</td>
       <td>${qa!=null?'★'.repeat(Math.round(qa))+' '+qa:'--'}</td>
+      <td style='font-size:11px'>${r.discUttCount?r.discUttCount+'개':'-'}</td>
       <td>${r.submitted?'✅':'-'}</td>
     </tr>
-    <tr><td colspan="14" style="padding:0">
+    <tr><td colspan="15" style="padding:0">
       <div class="dbox" id="det-${i}">
         <div class="dg">${STAGES.map(st=>`<div class="dc"><h4>${SN[st]}</h4><p>글자: <strong>${(r.research?.[st]?.chars||0).toLocaleString()}자</strong></p><p>AI질문: <strong>${r.research?.[st]?.aiQA?.length||0}회</strong></p>${(r.research?.[st]?.aiQA||[]).slice(0,3).map(qa=>`<div class="qi"><div class="qq">Q: ${(qa.q||'').slice(0,50)}</div><div class="qa">A: ${(qa.a||'').slice(0,60)}</div></div>`).join('')}</div>`).join('')}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">
@@ -668,7 +669,9 @@ function exportCSV(){
     '계획AI질문답변','개요AI질문답변','초고AI질문답변','고쳐쓰기AI질문답변',
     'AI답변↔최종글유사도','초고↔최종글유사도','지식수준','지식수준설명',
     '글질_내용(1-5)','글질_구조(1-5)','글질_향상(1-5)','글질_AI활용(1-5)','글질_평균',
-    'AI활용반성','계획유사도','개요유사도','초고유사도','고쳐쓰기유사도','전체평균유사도','KL_단계별상세','제출여부','제출시각',
+    'AI활용반성','계획유사도','개요유사도','초고유사도','고쳐쓰기유사도','전체평균유사도','KL_단계별상세',
+    '팀토의_팀이름','팀토의_발화수','팀토의_발화전체',
+    '제출여부','제출시각',
     '계획하기_주제','계획하기_목적','계획하기_독자','계획하기_핵심주장','계획하기_AI메모','계획하기_형식',
     '개요쓰기_내용',
     '초고내용','최종글내용'];
@@ -684,7 +687,9 @@ function exportCSV(){
       ...q,q.reduce((a,b)=>a+b,0),...qa,
       r.similarity!=null?r.similarity+'%':'미분석',r.draftSimilarity!=null?r.draftSimilarity+'%':'미분석',r.kl||'',r.klDetail||'',
       qs.content||0,qs.structure||0,qs.improvement||0,qs.ai_utility||0,qavg,
-      r.reflection||'',(r.stageSim?.plan?.sim!=null?r.stageSim.plan.sim+'%':''),(r.stageSim?.outline?.sim!=null?r.stageSim.outline.sim+'%':''),(r.stageSim?.draft?.sim!=null?r.stageSim.draft.sim+'%':''),(r.stageSim?.revise?.sim!=null?r.stageSim.revise.sim+'%':''),(r.stageSim?.overall!=null?r.stageSim.overall+'%':''),r.klDetail||'',r.submitted?'제출':'진행중',r.submitTime||'',
+      r.reflection||'',(r.stageSim?.plan?.sim!=null?r.stageSim.plan.sim+'%':''),(r.stageSim?.outline?.sim!=null?r.stageSim.outline.sim+'%':''),(r.stageSim?.draft?.sim!=null?r.stageSim.draft.sim+'%':''),(r.stageSim?.revise?.sim!=null?r.stageSim.revise.sim+'%':''),(r.stageSim?.overall!=null?r.stageSim.overall+'%':''),r.klDetail||'',
+      r.discTeam||'',r.discUttCount||0,r.discUttText||'',
+      r.submitted?'제출':'진행중',r.submitTime||'',
       r.planData?.topic||'',r.planData?.purpose||'',r.planData?.reader||'',
       r.planData?.idea||'',r.planData?.ref||'',r.planData?.format||'',
       r.outlineData||'',
@@ -941,13 +946,26 @@ async function submitFinal(){
       return (labels[i]||('항목'+(i+1)))+': '+ta.value.trim();
     }).filter(t=>t.split(': ')[1]).join('\n');
 
+    // 팀 토의 발화 수집
+    var discUttText='';
+    var discUttCount=0;
+    var discUttDetail=[];
+    if(DS.utterances&&DS.utterances.length){
+      discUttCount=DS.utterances.length;
+      discUttText=DS.utterances.map(function(u,i){return '['+(i+1)+']'+u.speaker+': '+u.text+(u.code?' ['+u.code+']':'');}).join(' || ');
+      discUttDetail=DS.utterances.map(function(u,i){return {no:i+1,speaker:u.speaker,text:u.text,time:u.time,code:u.code||'',reason:u.reason||''};});
+    }
     const submitData={submitted:true,submitTime:new Date().toLocaleString('ko-KR'),
       draftText,finalText,reflection,
       similarity:aiSim,
       draftSimilarity:draftSim,
       qualStars:S.qualStars,
       kl:klResult?'Knowledge '+klResult.dominant:'',klDetail:klResult?.comment||'',stageSim:klResult?.stageSim||{},klSentenceDetails:klResult?.sentenceDetails||[],
-      planData,outlineData};
+      planData,outlineData,
+      discTeam:DS.teamName||'',
+      discUttCount:discUttCount,
+      discUttText:discUttText,
+      discUttDetail:discUttDetail};
     updateSub(submitData);
 
     if(S.formsUrl){
@@ -1439,8 +1457,11 @@ function createDiscussionPanel() {
       <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
     </div>
 
-    <!-- 1단계: 녹음 제어 -->
-    <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
+    <!-- 기기별 안내 배너 (JS로 제어) -->
+    <div id="device-guide" style="border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.7;display:none"></div>
+
+    <!-- PC용: 녹음 제어 -->
+    <div id="pc-rec-section" style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">① 🎙️ 녹음</div>
       <button id="rec-btn" onclick="toggleRecording()" style="width:100%;padding:11px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">▶ 녹음 시작</button>
       <div style="background:#fff;border:1.5px solid var(--bd);border-radius:var(--rs);padding:10px;min-height:60px;font-size:13px;color:var(--ink);line-height:1.7;margin-top:8px">
@@ -1449,14 +1470,21 @@ function createDiscussionPanel() {
       </div>
     </div>
 
-    <!-- 2단계: 발화자 선택 + 저장 (녹음 종료 후) -->
+    <!-- 모바일용: 직접 입력 (JS로 표시) -->
+    <div id="mobile-input-section" style="background:var(--pur-lt);border:1.5px solid #ddd6fe;border-radius:var(--rs);padding:12px;display:none">
+      <div style="font-size:12px;font-weight:700;color:var(--pur);margin-bottom:6px">✏️ 직접 입력</div>
+      <div style="font-size:11px;color:var(--pur);margin-bottom:8px;line-height:1.6">말한 내용을 직접 입력하세요<br>발화자 선택 후 저장하면 기록됩니다</div>
+      <textarea id="mobile-direct-input" placeholder="여기에 발화 내용을 입력하세요…" style="width:100%;padding:10px;border:1.5px solid #ddd6fe;border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;min-height:80px;line-height:1.7;background:#fff" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveMobileInput()}"></textarea>
+    </div>
+
+    <!-- 2단계: 발화자 선택 + 저장 -->
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">② 🎤 발화자 선택 후 저장</div>
-      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">녹음 종료 후 방금 말한 사람을 선택하세요</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px" id="speaker-guide">발화 후 방금 말한 사람을 선택하세요</div>
       <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
         <div style="font-size:11px;color:var(--ink3)">팀원을 먼저 추가하세요</div>
       </div>
-      <button onclick="saveUtterance()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
+      <button onclick="saveUtteranceSmart()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
     </div>
 
     <!-- 발화 목록 -->
@@ -1505,10 +1533,29 @@ function toggleDiscPanel() {
   if (!panel) {
     slot.innerHTML = createDiscussionPanel();
     panel = document.getElementById('disc-panel');
+    renderUtteranceList();
+    const cnt = document.getElementById('utt-count');
+    if (cnt) cnt.textContent = DS.utterances.length;
+    // 기기 감지 후 UI 초기화
+    setTimeout(_initDiscUI, 50);
   }
   const hidden = !panel.style.width || panel.style.width === '0px' || panel.style.display === 'none';
-  panel.style.display = hidden ? 'flex' : 'none';
-  panel.style.flexDirection = 'column';
+  if (hidden) {
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    // 모바일: 전체화면 오버레이
+    if (window.innerWidth <= 660) {
+      panel.style.position = 'fixed';
+      panel.style.top = '0';
+      panel.style.left = '0';
+      panel.style.right = '0';
+      panel.style.bottom = '0';
+      panel.style.width = '100%';
+      panel.style.zIndex = '200';
+    }
+  } else {
+    panel.style.display = 'none';
+  }
 }
 
 function switchDiscTab(tab) {
@@ -1706,6 +1753,26 @@ function stopRecording() {
   if(btn){btn.textContent='▶ 녹음 시작';btn.style.background='var(--grn)';}
   if(dot){dot.style.background='#94a3b8';dot.style.animation='none';}
   toast('⏹ 녹음 종료 — 발화자를 선택하고 저장하세요');
+}
+
+
+function saveMobileInput() {
+  const ta = document.getElementById('mobile-direct-input');
+  if (ta && ta.value.trim()) {
+    DS.speakerBuffer = ta.value.trim();
+    ta.value = '';
+    saveUtteranceSmart();
+  }
+}
+
+function saveUtteranceSmart() {
+  // 모바일 직접입력 우선, 없으면 녹음 버퍼
+  const mobileInput = document.getElementById('mobile-direct-input');
+  if (mobileInput && mobileInput.value.trim()) {
+    DS.speakerBuffer = mobileInput.value.trim();
+    mobileInput.value = '';
+  }
+  saveUtterance();
 }
 
 function saveUtterance() {
