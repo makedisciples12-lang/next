@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>글쓰기 학습터 v6</title>
+<title>글쓰기 학습터 v5</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -165,7 +165,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
   <div class="brand">
     <div class="brand-ico">✍️</div>
     <h1>글쓰기 학습터</h1>
-    <p>AI 활용 협력 글쓰기 연구 플랫폼 v6</p>
+    <p>AI 활용 글쓰기 연구 플랫폼 v5</p>
   </div>
   <div class="card">
     <div class="tabs">
@@ -262,7 +262,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
       <button class="snav" id="snav-draft" onclick="goStage('draft')">✏️ 초고쓰기</button>
       <button class="snav" id="snav-revise" onclick="goStage('revise')">🔍 고쳐쓰기</button>
     </nav>
-    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
+    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700;margin-right:4px">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
   </header>
   <div class="s-body">
     <div class="wcol">
@@ -421,7 +421,13 @@ const S={
 };
 
 async function callClaude(messages,system,maxTok=1000){
-  const key=S.apiKey||localStorage.getItem('wp_key')||'';
+  let key=S.apiKey||localStorage.getItem('wp_key')||'';
+  if(!key){
+    try{
+      const r=await window.storage.get('apikey_'+S.classCode,true);
+      if(r&&r.value){key=r.value;S.apiKey=key;localStorage.setItem('wp_key',key);}
+    }catch(e){}
+  }
   if(!key)throw new Error('API_KEY_MISSING');
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -463,6 +469,12 @@ function studentEnter(){
   loadSettings();
   show('pg-student');
   initOutline();initStars();
+  // 교사가 공유한 API 키 자동 로드
+  if(!S.apiKey&&!localStorage.getItem('wp_key')){
+    window.storage.get('apikey_'+S.classCode,true).then(r=>{
+      if(r&&r.value){S.apiKey=r.value;localStorage.setItem('wp_key',r.value);}
+    }).catch(()=>{});
+  }
   goStage('plan');renderAI();
   updateSub({stage:'plan'});
   }catch(e){toast('오류: '+e.message);console.error(e);}
@@ -475,12 +487,18 @@ function teacherEnter(){
   }catch(e){toast('오류: '+e.message);console.error(e);}
 }
 
-function saveApiKey(){
+async function saveApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim();
   if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키 형식이 아닙니다 (sk-ant-... 로 시작)');return}
   S.apiKey=k;localStorage.setItem('wp_key',k);
-  document.getElementById('api-key-status').textContent='✅ 저장됨';
-  toast('✅ API 키 저장됨');
+  try{
+    await window.storage.set('apikey_'+S.classCode,k,true);
+    document.getElementById('api-key-status').textContent='✅ 저장됨 — 학생들과 자동 공유됩니다';
+    toast('✅ API 키 저장 완료! 같은 코드 학생들이 자동으로 AI를 사용할 수 있습니다');
+  }catch(e){
+    document.getElementById('api-key-status').textContent='✅ 저장됨';
+    toast('✅ API 키 저장됨');
+  }
 }
 async function testApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim()||S.apiKey;
@@ -1296,7 +1314,7 @@ function createDiscussionPanel() {
       <div id="speaker-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
         <div style="font-size:11px;color:var(--ink3)">팀원을 먼저 추가하세요</div>
       </div>
-      <button onclick="saveUtterance()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
+      <button onclick="saveAndReset()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
     </div>
 
     <!-- 발화 목록 -->
@@ -1345,6 +1363,10 @@ function toggleDiscPanel() {
   if (!panel) {
     slot.innerHTML = createDiscussionPanel();
     panel = document.getElementById('disc-panel');
+    // 패널 처음 열 때 기존 발화 목록 복원
+    renderUtteranceList();
+    const cnt = document.getElementById('utt-count');
+    if (cnt) cnt.textContent = DS.utterances.length;
   }
   const hidden = !panel.style.width || panel.style.width === '0px' || panel.style.display === 'none';
   panel.style.display = hidden ? 'flex' : 'none';
@@ -1464,9 +1486,31 @@ function stopRecording() {
   toast('⏹ 녹음 종료 — 발화자를 선택하고 저장하세요');
 }
 
+function saveAndReset() {
+  // 녹음 중이어도 현재까지 전사된 내용으로 저장
+  // live-transcript에서 interim 포함 텍스트 가져오기
+  const liveEl = document.getElementById('live-transcript');
+  if (liveEl && DS.isRecording) {
+    const liveText = liveEl.textContent.replace('…','').trim();
+    if (liveText && liveText !== '녹음 시작 버튼을 누르세요') {
+      // interim 포함 텍스트를 버퍼에 반영
+      DS.speakerBuffer = liveText;
+    }
+  }
+  saveUtterance();
+}
+
 function saveUtterance() {
-  const text = DS.speakerBuffer.trim();
-  if (!text) { toast('저장할 발화가 없습니다'); return; }
+  // speakerBuffer 우선, 없으면 live-transcript에서 가져오기
+  let text = DS.speakerBuffer.trim();
+  if (!text) {
+    const liveEl = document.getElementById('live-transcript');
+    if (liveEl) {
+      const liveText = liveEl.textContent.replace('녹음 시작 버튼을 누르세요','').replace('저장됐습니다. 다음 녹음을 시작하세요','').replace('…','').trim();
+      if (liveText) text = liveText;
+    }
+  }
+  if (!text) { toast('저장할 발화가 없습니다. 먼저 녹음 후 말씀하세요.'); return; }
   if (!DS.currentSpeaker) { toast('발화자를 먼저 선택하세요'); return; }
   DS.utterances.push({
     id: Date.now(),
