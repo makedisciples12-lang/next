@@ -156,22 +156,39 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
 @media(max-width:860px){.ai-col{width:300px}.g2{grid-template-columns:1fr}}
 @media(max-width:660px){
+  /* AI 위, 글쓰기 아래 */
   .s-body{flex-direction:column}
-  .wcol{flex:1;min-height:0;overflow:hidden}
-  .ai-col{width:100% !important;height:44px;border-left:none;border-top:1px solid var(--bd);flex-shrink:0;overflow:hidden;transition:height .3s}
+  .wcol{order:2;flex:1;min-height:0;overflow:hidden}
+  .ai-col{
+    order:1;
+    width:100% !important;
+    height:44px;
+    border-left:none;
+    border-bottom:1px solid var(--bd);
+    flex-shrink:0;
+    overflow:hidden;
+    transition:height .25s ease;
+  }
   .ai-col.closed{height:44px !important}
-  .ai-col:not(.closed){height:50vh !important;min-height:240px}
-  .ai-col:not(.closed) #ai-body{display:flex !important;flex-direction:column;overflow:hidden;height:calc(50vh - 44px)}
-  .ai-msgs{flex:1 !important;overflow-y:auto;min-height:0}
-  .qbtns,.mtabs,.ai-ok,.ai-in{flex-shrink:0 !important}
-  .snav{font-size:10px;padding:4px 7px}
+  .ai-col:not(.closed){
+    height:52vh !important;
+    display:flex !important;
+    flex-direction:column !important;
+  }
+  /* ai-body 내부 flex 구조 */
+  .ai-col:not(.closed) #ai-body{
+    flex:1 !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+    display:flex !important;
+    flex-direction:column !important;
+  }
+  .ai-msgs{flex:1 !important;overflow-y:auto !important;min-height:0 !important}
+  .ai-in,.qbtns,.mtabs,.ai-ok{flex-shrink:0 !important}
+  /* 네비 축소 */
+  .snav{font-size:10px;padding:4px 6px}
   .snav-wrap{gap:1px}
-  #ol-wrap{grid-template-columns:1fr !important}
-  #st-draft > div[style*="display:flex"]{flex-direction:column !important}
-  #st-draft > div > div[style*="width:230px"]{width:100% !important;height:100px;border-right:none;border-bottom:1px solid var(--bd)}
-  #disc-panel{position:fixed !important;top:0;left:0;right:0;bottom:0;width:100% !important;height:100% !important;z-index:200;overflow-y:auto}
 }
-@media(max-width:400px){.snav{font-size:9px;padding:3px 5px}.s-logo{font-size:12px}}
 </style>
 </head>
 <body>
@@ -278,7 +295,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
       <button class="snav" id="snav-draft" onclick="goStage('draft')">✏️ 초고쓰기</button>
       <button class="snav" id="snav-revise" onclick="goStage('revise')">🔍 고쳐쓰기</button>
     </nav>
-    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700;margin-right:4px">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
+    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
   </header>
   <div class="s-body">
     <div class="wcol">
@@ -437,8 +454,15 @@ const S={
 };
 
 async function callClaude(messages,system,maxTok=1000){
+  // 1순위: 본인 로컬 저장 키
+  // 2순위: 교사가 공유 저장소에 올린 키 (같은 수업코드)
   let key=S.apiKey||localStorage.getItem('wp_key')||'';
-  if(!key){try{const r=await window.storage.get('apikey_'+S.classCode,true);if(r&&r.value){key=r.value;S.apiKey=key;localStorage.setItem('wp_key',key);}}catch(e){}}
+  if(!key){
+    try{
+      const r=await window.storage.get('apikey_'+S.classCode,true);
+      if(r&&r.value){key=r.value;S.apiKey=key;}
+    }catch(e){}
+  }
   if(!key)throw new Error('API_KEY_MISSING');
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
@@ -496,8 +520,17 @@ function teacherEnter(){
 async function saveApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim();
   if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키 형식이 아닙니다 (sk-ant-... 로 시작)');return}
-  S.apiKey=k;localStorage.setItem('wp_key',k);
-  try{await window.storage.set('apikey_'+S.classCode,k,true);document.getElementById('api-key-status').textContent='✅ 저장됨 — 학생 자동 공유';toast('✅ API 키 저장 완료! 학생들도 자동으로 AI 사용 가능합니다');}catch(e){document.getElementById('api-key-status').textContent='✅ 저장됨';toast('✅ API 키 저장됨');}
+  S.apiKey=k;
+  localStorage.setItem('wp_key',k);
+  // 같은 수업 코드 학생들도 쓸 수 있도록 공유 저장소에 저장
+  try{
+    await window.storage.set('apikey_'+S.classCode,k,true);
+    document.getElementById('api-key-status').textContent='✅ 저장됨 (학생들과 공유됨)';
+    toast('✅ API 키 저장 완료 — 같은 코드 학생들도 자동 사용 가능합니다');
+  }catch(e){
+    document.getElementById('api-key-status').textContent='✅ 로컬 저장됨';
+    toast('✅ API 키 저장됨');
+  }
 }
 async function testApiKey(){
   const k=document.getElementById('api-key-input')?.value?.trim()||S.apiKey;
@@ -1201,7 +1234,7 @@ async function sendAI(){
     reply=await callClaude([{role:'user',content:text}],sys);
     aiAnswer=reply;
   }catch(e){
-    reply=e.message==='API_KEY_MISSING'?'⚠️ API 키가 없습니다. 오른쪽 위 입력창에 교사에게 받은 키를 입력해주세요.':'❌ AI 연결 오류: '+e.message;
+    reply=e.message==='API_KEY_MISSING'?'⚠️ AI 연결 중입니다. 잠시 후 다시 질문해보세요. 계속 안 되면 교사에게 문의하세요.':'❌ AI 연결 오류: '+e.message;
   }
 
   if(!S.research[S.stage].aiQA)S.research[S.stage].aiQA=[];
@@ -1219,11 +1252,22 @@ function toggleAI(){
   const col=document.getElementById('ai-col');
   const body=document.getElementById('ai-body');
   const btn=document.getElementById('ai-tog-btn');
-  if(!col)return;
-  col.classList.toggle('closed',!S.aiOpen);
-  if(body)body.style.display=S.aiOpen?'flex':'none';
-  if(btn)btn.textContent=S.aiOpen?'▼':'▲';
-  if(S.aiOpen&&window.innerWidth<=660){setTimeout(()=>{col.scrollIntoView({behavior:'smooth',block:'end'});},300);}
+  if(col) col.classList.toggle('closed',!S.aiOpen);
+  if(body){
+    if(S.aiOpen){
+      // flex 속성 명시 (모바일에서 CSS만으로 안 될 때 대비)
+      body.style.display='flex';
+      body.style.flexDirection='column';
+      body.style.flex='1';
+      body.style.minHeight='0';
+      body.style.overflow='hidden';
+    } else {
+      body.style.display='none';
+    }
+  }
+  // 모바일에서는 ▼/▲, PC에서는 ◀/▶
+  const isMobile=window.innerWidth<=660;
+  if(btn) btn.textContent=S.aiOpen?(isMobile?'▼':'◀'):(isMobile?'▲':'▶');
 }
 
 function openModal(t,b,cb){document.getElementById('mo-title').textContent=t;document.getElementById('mo-body').textContent=b;document.getElementById('mo-ok').onclick=cb;document.getElementById('ov').classList.add('show')}
@@ -1236,6 +1280,16 @@ function esc(s){return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/
 STAGES.forEach(s=>{const el=document.getElementById('st-'+s);if(el)el.style.display='none'});
 document.getElementById('st-plan').style.display='flex';
 loadSettings();
+// 모바일에서 AI 패널 초기 닫힘
+if(window.innerWidth<=660){
+  S.aiOpen=false;
+  const col=document.getElementById('ai-col');
+  const body=document.getElementById('ai-body');
+  if(col) col.classList.add('closed');
+  if(body) body.style.display='none';
+  const btn=document.getElementById('ai-tog-btn');
+  if(btn) btn.textContent='▲';
+}
 
 </script>
 <script>
@@ -1367,13 +1421,10 @@ function toggleDiscPanel() {
   if (!panel) {
     slot.innerHTML = createDiscussionPanel();
     panel = document.getElementById('disc-panel');
-    renderUtteranceList();
-    const cnt = document.getElementById('utt-count');
-    if (cnt) cnt.textContent = DS.utterances.length;
   }
-  const hidden = panel.style.display === 'none' || !panel.style.display;
+  const hidden = !panel.style.width || panel.style.width === '0px' || panel.style.display === 'none';
   panel.style.display = hidden ? 'flex' : 'none';
-  if (hidden) panel.style.flexDirection = 'column';
+  panel.style.flexDirection = 'column';
 }
 
 function switchDiscTab(tab) {
@@ -1445,84 +1496,76 @@ function toggleRecording() {
 
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    toast(isIOS ? '아이폰/아이패드는 음성 인식이 지원되지 않습니다.\n아래 팀원 이름 옆 직접 입력을 이용해주세요.' : 'Chrome 또는 Samsung Internet 브라우저를 사용해주세요.');
+    const isIOS=/iP(ad|hone|od)/.test(navigator.userAgent);
+    toast(isIOS?'아이폰/아이패드 Safari는 음성 인식 미지원\n아래 직접 입력창을 사용하세요':'Chrome/Samsung Internet 브라우저를 사용해주세요');
     return;
   }
-  if (navigator.permissions) {
-    navigator.permissions.query({name:'microphone'}).then(r => {
-      if (r.state === 'denied') { toast('마이크 권한이 차단됐습니다.\n주소창 자물쇠 → 마이크 → 허용 후 새로고침하세요.'); return; }
-      _doRec();
-    }).catch(() => _doRec());
-  } else { _doRec(); }
+  if(DS.isRecording) return;
+  // 중복 방지용 전역 Set 초기화
+  DS._seen=new Set();
+  DS._recActive=true;
+  _recLoop();
 }
 
-function _doRec() {
-  if (DS.isRecording) return;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function _recLoop(){
+  if(!DS._recActive) return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();
+  rec.lang='ko-KR';
+  rec.continuous=false;      // false: 모바일 중복 전사 방지 핵심
+  rec.interimResults=true;
+  rec.maxAlternatives=1;
+  DS.recognition=rec;
 
-  // 세션 ID: 재시작 시 이전 결과 재전송 방지 (모바일 WebKit 버그 대응)
-  const sid = Date.now();
-  DS._sid = sid;
-  DS._seen = new Set();
-
-  DS.recognition = new SR();
-  DS.recognition.lang = 'ko-KR';
-  DS.recognition.continuous = true;   // 연속 인식 (말 잘림 방지)
-  DS.recognition.interimResults = true;
-  DS.recognition.maxAlternatives = 1;
-
-  DS.recognition.onresult = e => {
-    if (DS._sid !== sid) return; // 다른 세션 결과 무시
-    let interim = '', newFinal = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) {
-        const key = t.trim();
-        if (key && !DS._seen.has(key)) { DS._seen.add(key); newFinal += t; }
-      } else { interim += t; }
+  rec.onresult=e=>{
+    let interim='',newFinal='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const txt=e.results[i][0].transcript;
+      if(e.results[i].isFinal){
+        // 공백 제거 키로 중복 체크
+        const key=txt.replace(/\s/g,'');
+        if(key&&!DS._seen.has(key)){DS._seen.add(key);newFinal+=txt;}
+      } else {interim+=txt;}
     }
-    if (newFinal) DS.speakerBuffer += newFinal;
-    const el = document.getElementById('live-transcript');
-    if (el) el.textContent = DS.speakerBuffer + (interim ? ' ' + interim + '…' : '');
+    if(newFinal) DS.speakerBuffer+=newFinal;
+    const el=document.getElementById('live-transcript');
+    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'…':'');
   };
 
-  DS.recognition.onerror = e => {
-    if (e.error === 'not-allowed' || e.error === 'permission-denied') {
-      toast('마이크 권한을 허용해주세요.\n주소창 자물쇠 → 마이크 → 허용');
+  rec.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='permission-denied'){
+      toast('마이크 권한을 허용해주세요\n주소창 자물쇠 → 마이크 → 허용');
       stopRecording();
     }
-    // no-speech 등은 onend에서 자동 재시작
+    // no-speech 등은 onend에서 재시작
   };
 
-  DS.recognition.onend = () => {
-    if (!DS.isRecording) return;
-    // 재시작 시 새 세션으로 (이전 결과 재전송 차단)
-    setTimeout(() => { if (DS.isRecording) _doRec(); }, 200);
+  rec.onend=()=>{
+    if(DS._recActive){setTimeout(_recLoop,120);}
   };
 
-  try {
-    DS.recognition.start();
-    DS.isRecording = true;
-    const btn = document.getElementById('rec-btn');
-    const dot = document.getElementById('rec-dot');
-    if (btn) { btn.textContent = '⏹ 녹음 종료'; btn.style.background = 'var(--red)'; }
-    if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'blink 1s infinite'; }
+  try{
+    rec.start();
+    DS.isRecording=true;
+    const btn=document.getElementById('rec-btn');
+    const dot=document.getElementById('rec-dot');
+    if(btn){btn.textContent='⏹ 녹음 종료';btn.style.background='var(--red)';}
+    if(dot){dot.style.background='#ef4444';dot.style.animation='blink 1s infinite';}
     toast('🎙️ 녹음 중 — 말씀하세요');
-  } catch(err) {
-    DS.isRecording = false;
-    toast('녹음 시작 실패: ' + err.message);
+  }catch(err){
+    DS.isRecording=false;DS._recActive=false;
+    toast('녹음 시작 실패: '+err.message);
   }
 }
 
 function stopRecording() {
-  DS.isRecording = false; // onend 재시작 차단 먼저
-  DS._sid = null;
-  try { if (DS.recognition) { DS.recognition.abort(); DS.recognition = null; } } catch(e) {}
-  const btn = document.getElementById('rec-btn');
-  const dot = document.getElementById('rec-dot');
-  if (btn) { btn.textContent = '▶ 녹음 시작'; btn.style.background = 'var(--grn)'; }
-  if (dot) { dot.style.background = '#94a3b8'; dot.style.animation = 'none'; }
+  DS._recActive=false;
+  DS.isRecording=false;
+  try{if(DS.recognition){DS.recognition.abort();DS.recognition=null;}}catch(e){}
+  const btn=document.getElementById('rec-btn');
+  const dot=document.getElementById('rec-dot');
+  if(btn){btn.textContent='▶ 녹음 시작';btn.style.background='var(--grn)';}
+  if(dot){dot.style.background='#94a3b8';dot.style.animation='none';}
   toast('⏹ 녹음 종료 — 발화자를 선택하고 저장하세요');
 }
 
