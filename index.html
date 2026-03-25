@@ -264,7 +264,28 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
       <h3>📊 Google Forms 연동</h3>
       <p class="tc-sub">Google Apps Script 웹앱 URL을 입력하면 학생 제출 시 Google Sheets에 자동 저장됩니다.</p>
       <div class="flist"><code>학생이름</code> <code>주제</code> <code>계획글자수</code> <code>개요글자수</code> <code>초고글자수</code> <code>최종글자수</code> <code>계획AI질문수</code> <code>개요AI질문수</code> <code>초고AI질문수</code> <code>고쳐쓰기AI질문수</code> <code>총AI질문수</code> <code>AI질문답변전체</code> <code>초고최종유사도</code> <code>지식수준</code> <code>지식수준설명</code> <code>글질향상자기평가</code> <code>AI활용반성</code> <code>초고내용</code> <code>최종글내용</code></div>
-      <div class="row"><input id="forms-url" type="url" placeholder="https://docs.google.com/forms/d/…/formResponse"><button class="btn-sm grn" onclick="saveForms()">저장</button></div>
+      <div style="background:var(--bg);border-radius:var(--rs);padding:10px 13px;margin-bottom:10px;font-size:12px;line-height:1.8">
+        <strong style="display:block;margin-bottom:6px">📋 Apps Script 코드 (복사해서 배포하세요)</strong>
+        <div style="background:var(--ink);color:#86efac;border-radius:var(--rs);padding:10px;font-family:monospace;font-size:11px;white-space:pre;overflow-x:auto;margin-bottom:6px">function doPost(e){
+  var s=SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var d=JSON.parse(e.postData.contents);
+  s.appendRow([d.학생이름,d.주제,d.제출시각,
+    d.계획글자수,d.개요글자수,d.초고글자수,d.최종글자수,d.글자변화율,
+    d.계획AI질문수,d.개요AI질문수,d.초고AI질문수,d.고쳐쓰기AI질문수,d.총AI질문수,
+    d.계획AI질문답변,d.개요AI질문답변,d.초고AI질문답변,d.고쳐쓰기AI질문답변,
+    d.AI답변최종글유사도,d.초고최종글유사도,
+    d.지식수준,d.지식수준설명,d.KL단계별상세,
+    d.글질_내용,d.글질_구조,d.글질_향상,d.글질_AI활용,d.글질_평균,
+    d.AI활용반성,
+    d.계획_주제,d.계획_목적,d.계획_독자,d.계획_핵심주장,
+    d.계획_AI메모,d.계획_추가메모,d.계획_형식,
+    d.개요내용,d.초고내용,d.최종글내용]);
+  return ContentService.createTextOutput('ok');
+}
+function doGet(e){return ContentService.createTextOutput('ok')}</div>
+        <div style="font-size:11px;color:var(--ink2)">① Google Sheets → 확장 프로그램 → Apps Script → 위 코드 붙여넣기<br>② 배포 → 새 배포 → 웹 앱 → 액세스: 모든 사용자 → 배포<br>③ 생성된 URL을 아래에 입력</div>
+      </div>
+      <div class="row"><input id="forms-url" type="url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn-sm grn" onclick="saveForms()">저장</button></div>
       <p id="forms-st" style="font-size:11px;color:var(--ink3);margin-top:5px">미설정</p>
     </div>
     <div class="tc">
@@ -921,31 +942,73 @@ async function submitFinal(){
         const qa=Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10;
         const dc=S.research.draft.chars,rc=S.research.revise.chars;
         const chg=dc>0?Math.round((rc-dc)/dc*100)+'%':'0%';
-        const payload={
+        // 단계별 AI 질문/답변 분리
+          const qaByStage=STAGES.reduce((o,s)=>{
+            o[s]=(S.research[s].aiQA||[]).map(x=>'Q:'+x.q+'|A:'+(x.a||'').slice(0,150)).join(';;');
+            return o;
+          },{});
+          // 계획하기 내용
+          const planTopic=document.getElementById('p-topic')?.value||'';
+          const planPurpose=document.getElementById('p-purpose')?.value||'';
+          const planReader=document.getElementById('p-reader')?.value||'';
+          const planIdea=document.getElementById('p-idea')?.value||'';
+          const planRef=document.getElementById('p-ref')?.value||'';
+          const planFormat=document.getElementById('p-format')?.value||'';
+          const planMemo2=document.getElementById('p-memo2')?.value||'';
+          // 개요 내용
+          const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+          const olLabels=['서론','본론1','본론2','본론3','결론'];
+          const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
+          // KL 단계별 상세
+          const stageSimStr=submitData.stageSim?Object.entries(submitData.stageSim).filter(([k])=>k!=='overall').map(([k,v])=>v&&v.sim!=null?{plan:'계획',outline:'개요',draft:'초고',revise:'고쳐쓰기'}[k]+'='+v.sim+'%('+({T:'Telling',R:'Transformation',C:'Creation'}[v.level]||v.level)+')':'').filter(Boolean).join(', '):'';
+          const payload={
+          // 기본 정보
           '학생이름':S.name,
           '주제':S.topic,
+          '제출시각':new Date().toLocaleString('ko-KR'),
+          // 글자 수
           '계획글자수':S.research.plan.chars,
           '개요글자수':S.research.outline.chars,
           '초고글자수':dc,
           '최종글자수':rc,
           '글자변화율':chg,
+          // AI 질문 횟수
           '계획AI질문수':S.research.plan.aiQA.length,
           '개요AI질문수':S.research.outline.aiQA.length,
           '초고AI질문수':S.research.draft.aiQA.length,
           '고쳐쓰기AI질문수':S.research.revise.aiQA.length,
           '총AI질문수':tq,
-          'AI질문답변전체':qaStr.slice(0,1000),
-          '초고최종유사도':simResult!=null?simResult+'%':'미분석',
+          // AI 질문/답변 단계별
+          '계획AI질문답변':qaByStage.plan.slice(0,800),
+          '개요AI질문답변':qaByStage.outline.slice(0,800),
+          '초고AI질문답변':qaByStage.draft.slice(0,800),
+          '고쳐쓰기AI질문답변':qaByStage.revise.slice(0,800),
+          // 유사도
+          'AI답변최종글유사도':aiSim!=null?aiSim+'%':'미분석',
+          '초고최종글유사도':draftSim!=null?draftSim+'%':'미분석',
+          // KL 분석
           '지식수준':submitData.kl||'',
           '지식수준설명':submitData.klDetail||'',
+          'KL단계별상세':stageSimStr,
+          // 자기평가
           '글질_내용':qs.content||0,
           '글질_구조':qs.structure||0,
           '글질_향상':qs.improvement||0,
           '글질_AI활용':qs.ai_utility||0,
           '글질_평균':qa,
           'AI활용반성':reflection,
-          '초고내용':draftText.slice(0,500),
-          '최종글내용':finalText.slice(0,500)
+          // 계획하기 내용
+          '계획_주제':planTopic,
+          '계획_목적':planPurpose,
+          '계획_독자':planReader,
+          '계획_핵심주장':planIdea,
+          '계획_AI메모':planRef.slice(0,500),
+          '계획_추가메모':planMemo2.slice(0,300),
+          '계획_형식':planFormat,
+          // 개요/초고/최종 전문
+          '개요내용':outlineText.slice(0,800),
+          '초고내용':draftText,
+          '최종글내용':finalText
         };
         await fetch(S.formsUrl,{
           method:'POST',
