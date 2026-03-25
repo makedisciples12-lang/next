@@ -115,7 +115,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-sub{background:var(--grn);color:#fff;border-color:var(--grn);display:none}.btn-sub:hover{background:#15803d}
 .ai-col{width:360px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
 .ai-col.closed{width:44px}
-.ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;cursor:pointer}
 .ai-ht{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap}
 .ai-dot{width:6px;height:6px;background:#86efac;border-radius:50%;animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -155,7 +155,40 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .mbtns{display:flex;gap:7px}
 .btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
 @media(max-width:860px){.ai-col{width:300px}.g2{grid-template-columns:1fr}}
-@media(max-width:660px){.s-body{flex-direction:column-reverse}.ai-col{width:100%;height:260px;border-left:none;border-top:1px solid var(--bd)}.ai-col.closed{width:100%;height:42px}}
+@media(max-width:660px){
+  /* 모바일: 상하 분할 - AI가 위, 글쓰기가 아래 */
+  .s-body{flex-direction:column}
+  .wcol{flex:1;min-height:0;overflow:hidden}
+  .ai-col{
+    width:100% !important;
+    height:42px;
+    border-left:none;
+    border-top:1px solid var(--bd);
+    flex-shrink:0;
+    transition:height .25s;
+    order:-1; /* AI 패널을 위로 */
+  }
+  .ai-col.closed{height:42px}
+  .ai-col:not(.closed){height:45vh;min-height:200px}
+  /* 모바일에서 팀 토의 패널 */
+  #disc-panel{width:100% !important;max-height:50vh;overflow-y:auto}
+  /* 모바일 nav 글자 축소 */
+  .snav{font-size:10px;padding:4px 7px}
+  .snav-wrap{gap:1px}
+  /* 계획하기 3열 → 1열 */
+  #st-plan .wscroll > div[style*="grid-template-columns:1fr 1fr 1fr"]{
+    grid-template-columns:1fr !important;
+  }
+  /* 개요 3열 → 1열 */
+  #ol-wrap{grid-template-columns:1fr !important}
+  /* 초고 분할 → 세로 */
+  #st-draft > div[style*="display:flex"]{flex-direction:column}
+  #st-draft > div > div[style*="width:230px"]{width:100%;height:120px;border-right:none;border-bottom:1px solid var(--bd)}
+}
+@media(max-width:400px){
+  .snav{font-size:9px;padding:3px 5px}
+  .s-logo{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -388,9 +421,9 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 
     <!-- AI -->
     <aside class="ai-col" id="ai-col">
-      <div class="ai-head">
+      <div class="ai-head" onclick="toggleAI()">
         <div class="ai-ht"><div class="ai-dot"></div>AI 도우미</div>
-        <button class="ai-tog" onclick="toggleAI()" id="ai-tog-btn">◀</button>
+        <button class="ai-tog" id="ai-tog-btn" style="pointer-events:none">◀</button>
       </div>
       <div id="ai-body" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0"></div>
     </aside>
@@ -637,7 +670,7 @@ function goStage(s){
   });
   if(s==='revise')syncRevise();
   if(s==='draft')updateOLPreview();
-  renderAI();updateBottom();updateSub({stage:s});
+  renderAI();initAIForMobile();updateBottom();updateSub({stage:s});
 }
 function nextStage(){const i=STAGES.indexOf(S.stage);if(i<STAGES.length-1){S.done[S.stage]=true;goStage(STAGES[i+1])}updateDots()}
 function prevStage(){const i=STAGES.indexOf(S.stage);if(i>0)goStage(STAGES[i-1])}
@@ -1219,7 +1252,19 @@ function toggleAI(){
   S.aiOpen=!S.aiOpen;
   document.getElementById('ai-col').classList.toggle('closed',!S.aiOpen);
   document.getElementById('ai-body').style.display=S.aiOpen?'flex':'none';
-  document.getElementById('ai-tog-btn').textContent=S.aiOpen?'◀':'▶';
+  document.getElementById('ai-tog-btn').textContent=S.aiOpen?'▼':'▲';
+}
+function initAIForMobile(){
+  // 모바일(660px 이하)에서는 AI 패널 처음에 닫힌 상태
+  if(window.innerWidth<=660){
+    S.aiOpen=false;
+    const col=document.getElementById('ai-col');
+    if(col)col.classList.add('closed');
+    const body=document.getElementById('ai-body');
+    if(body)body.style.display='none';
+    const btn=document.getElementById('ai-tog-btn');
+    if(btn)btn.textContent='▲';
+  }
 }
 
 function openModal(t,b,cb){document.getElementById('mo-title').textContent=t;document.getElementById('mo-body').textContent=b;document.getElementById('mo-ok').onclick=cb;document.getElementById('ov').classList.add('show')}
@@ -1363,15 +1408,48 @@ function toggleDiscPanel() {
   if (!panel) {
     slot.innerHTML = createDiscussionPanel();
     panel = document.getElementById('disc-panel');
-    // 패널 처음 열 때 기존 발화 목록 복원
     renderUtteranceList();
     const cnt = document.getElementById('utt-count');
     if (cnt) cnt.textContent = DS.utterances.length;
   }
-  const hidden = !panel.style.width || panel.style.width === '0px' || panel.style.display === 'none';
-  panel.style.display = hidden ? 'flex' : 'none';
-  panel.style.flexDirection = 'column';
+  const hidden = panel.style.display === 'none' || panel.style.display === '';
+  if (hidden) {
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    _applyDiscPanelMobile(panel);
+  } else {
+    panel.style.display = 'none';
+  }
 }
+
+// 모바일에서 팀토의 패널: fixed 전체화면 오버레이
+function _applyDiscPanelMobile(panel) {
+  if (!panel) return;
+  if (window.innerWidth <= 660) {
+    // 모바일: 전체화면 오버레이
+    panel.style.position = 'fixed';
+    panel.style.top = '0';
+    panel.style.left = '0';
+    panel.style.right = '0';
+    panel.style.bottom = '0';
+    panel.style.width = '100%';
+    panel.style.height = '100%';
+    panel.style.zIndex = '200';
+    panel.style.overflowY = 'auto';
+  } else {
+    // PC: 인라인 패널
+    panel.style.position = '';
+    panel.style.top = '';
+    panel.style.left = '';
+    panel.style.right = '';
+    panel.style.bottom = '';
+    panel.style.width = '380px';
+    panel.style.height = '';
+    panel.style.zIndex = '';
+    panel.style.overflowY = '';
+  }
+}
+
 
 function switchDiscTab(tab) {
   ['record','code','result'].forEach(t => {
@@ -1442,43 +1520,112 @@ function toggleRecording() {
 
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    toast('Chrome 브라우저를 사용해주세요');
+    // iOS Safari는 Web Speech API 미지원 → 직접 입력 안내
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      toast('아이폰/아이패드는 음성 인식이 지원되지 않습니다.\n아래 직접 입력창을 이용해주세요.');
+    } else {
+      toast('Chrome 또는 Samsung Internet 브라우저를 사용해주세요.');
+    }
     return;
   }
+
+  // 마이크 권한 확인
+  if (navigator.permissions) {
+    navigator.permissions.query({name:'microphone'}).then(r => {
+      if (r.state === 'denied') {
+        toast('마이크 권한이 차단됐습니다.\n주소창 왼쪽 자물쇠 → 마이크 → 허용 후 새로고침하세요.');
+      } else {
+        _startRec();
+      }
+    }).catch(() => _startRec());
+  } else {
+    _startRec();
+  }
+}
+
+function _startRec() {
+  // 이미 녹음 중이면 중복 시작 방지
+  if (DS.isRecording) return;
+
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // ── 핵심: 세션 ID로 중복 전사 방지 ──
+  // 모바일 WebKit은 recognition.start() 재호출 시
+  // 이전 세션 결과를 다시 전송하는 버그가 있음
+  // → 각 세션에 고유 ID 부여, 다른 세션 결과 무시
+  const sessionId = Date.now();
+  DS._sessionId = sessionId;
+  DS._seenFinals = new Set(); // 이미 처리한 final 텍스트 추적
+
   DS.recognition = new SR();
   DS.recognition.lang = 'ko-KR';
-  DS.recognition.continuous = true;
+  DS.recognition.continuous = false;  // 모바일 호환: false
   DS.recognition.interimResults = true;
-
-  DS.speakerBuffer = '';
+  DS.recognition.maxAlternatives = 1;
 
   DS.recognition.onresult = e => {
-    let interim = '', final = '';
+    // 이 이벤트가 현재 활성 세션 것인지 확인
+    if (DS._sessionId !== sessionId) return;
+
+    let interim = '', newFinal = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
+      const transcript = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        const key = transcript.trim();
+        // 이미 처리한 텍스트면 무시 (중복 방지 핵심)
+        if (key && !DS._seenFinals.has(key)) {
+          DS._seenFinals.add(key);
+          newFinal += transcript;
+        }
+      } else {
+        interim += transcript;
+      }
     }
-    if (final) DS.speakerBuffer += final;
+    if (newFinal) DS.speakerBuffer += newFinal;
     const el = document.getElementById('live-transcript');
     if (el) el.textContent = DS.speakerBuffer + (interim ? ' ' + interim + '…' : '');
   };
 
-  DS.recognition.onerror = e => { if (e.error !== 'no-speech') stopRecording(); };
-  DS.recognition.onend = () => { if (DS.isRecording) DS.recognition.start(); };
-  DS.recognition.start();
-  DS.isRecording = true;
+  DS.recognition.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+      toast('마이크 권한을 허용해주세요.\n주소창 자물쇠 아이콘 → 마이크 → 허용');
+      stopRecording(); return;
+    }
+    // no-speech, aborted, network 등은 자동 재시작
+  };
 
-  const btn = document.getElementById('rec-btn');
-  const dot = document.getElementById('rec-dot');
-  if (btn) { btn.textContent = '⏹ 녹음 종료'; btn.style.background = 'var(--red)'; }
-  if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'blink 1s infinite'; }
-  toast('🎙️ 녹음 중 — 말씀하세요');
+  DS.recognition.onend = () => {
+    if (!DS.isRecording || DS._sessionId !== sessionId) return;
+    // 100ms 딜레이: 모바일에서 즉시 재시작 시 오류 방지
+    setTimeout(() => {
+      if (DS.isRecording) _startRec();
+    }, 150);
+  };
+
+  try {
+    DS.recognition.start();
+    DS.isRecording = true;
+    const btn = document.getElementById('rec-btn');
+    const dot = document.getElementById('rec-dot');
+    if (btn) { btn.textContent = '⏹ 녹음 종료'; btn.style.background = 'var(--red)'; }
+    if (dot) { dot.style.background = '#ef4444'; dot.style.animation = 'blink 1s infinite'; }
+    toast('🎙️ 녹음 중 — 말씀하세요');
+  } catch(err) {
+    DS.isRecording = false;
+    toast('녹음 시작 실패. ' + err.message);
+  }
 }
 
 function stopRecording() {
-  if (DS.recognition) DS.recognition.stop();
-  DS.isRecording = false;
+  DS.isRecording = false;     // onend 재시작 막기 먼저
+  DS._sessionId = null;       // 세션 무효화
+  try {
+    if (DS.recognition) {
+      DS.recognition.abort(); // stop()보다 즉시 종료
+      DS.recognition = null;
+    }
+  } catch(e) {}
   const btn = document.getElementById('rec-btn');
   const dot = document.getElementById('rec-dot');
   if (btn) { btn.textContent = '▶ 녹음 시작'; btn.style.background = 'var(--grn)'; }
