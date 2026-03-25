@@ -467,7 +467,8 @@ const QUICK={
 };
 
 const S={
-  name:'',topic:'',stage:'plan',aiOpen:true,classCode:'WRITE1',formsUrl:'',
+  name:'',topic:'',stage:'plan',aiOpen:true,classCode:'WRITE1',
+  formsUrl:'https://script.google.com/macros/s/AKfycbzhVaSWz2fRZ5TAl9keSV22XKGiQAhmz4E7XfLrRn97iLeIEnh0k9DHxi2jbv2NDQcfIQ/exec',
   done:{plan:false,outline:false,draft:false,revise:false},
   ai:{plan:true,outline:true,draft:false,revise:true},
   qualStars:{content:0,structure:0,improvement:0,ai_utility:0},
@@ -1042,20 +1043,41 @@ async function submitFinal(){
           // 개요/초고/최종 전문
           '개요내용':outlineText.slice(0,800),
           '초고내용':draftText,
-          '최종글내용':finalText
+          '최종글내용':finalText,
+          // 팀 토의 발화
+          'discTeam':submitData.discTeam||'',
+          'discUttCount':submitData.discUttCount||0,
+          'discUttText':submitData.discUttText||''
         };
-        const resp=await fetch(S.formsUrl,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify(payload)
-        });
-        toast('✅ 제출 완료! Google Sheets에 저장됐어요 🎉');
+
+        // formsUrl이 없으면 shared storage에서 재시도
+        let fUrl=S.formsUrl||localStorage.getItem('wp_forms')||'';
+        if(!fUrl){
+          try{
+            const fr=await window.storage.get('formsUrl_'+S.classCode,true);
+            if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;localStorage.setItem('wp_forms',fUrl);}
+          }catch(e){}
+        }
+
+        if(!fUrl){
+          toast('✅ 제출 완료! (Sheets URL 미설정 — 교사 패널에서 설정 필요)');
+        } else {
+          const resp=await fetch(fUrl,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+          });
+          const respText=await resp.text().catch(()=>'');
+          if(respText.includes('error')){
+            toast('⚠️ 제출됨, Sheets 오류: '+respText.slice(0,50));
+          } else {
+            toast('✅ 제출 완료! Google Sheets에 저장됐어요 🎉');
+          }
+        }
       }catch(e){
-        console.log('Sheets 저장 오류:',e);
-        toast('✅ 제출됨 (Sheets 전송 실패: '+e.message+')');
+        console.error('Sheets 오류:',e);
+        toast('✅ 제출됨 (Sheets 전송 실패 — 교사에게 알려주세요)');
       }
-    } else {
-      toast('✅ 제출 완료! 수고했어요 🎉');
     }
     renderSubs();
   });
