@@ -113,7 +113,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-nav:hover{border-color:var(--ink)}
 .btn-nxt{background:var(--ink);color:#fff;border-color:var(--ink)}.btn-nxt:hover{background:#2c2926}
 .btn-sub{background:var(--grn);color:#fff;border-color:var(--grn);display:none}.btn-sub:hover{background:#15803d}
-.ai-col{width:360px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
+.ai-col{width:480px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
 .ai-col.closed{width:44px}
 .ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ai-ht{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap}
@@ -140,7 +140,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .qbtn{padding:3px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:11px;font-family:inherit;font-size:11px;color:var(--ink);cursor:pointer;transition:all .15s;white-space:nowrap}
 .qbtn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
 .ai-in{padding:9px 11px;display:flex;gap:6px;align-items:flex-end;flex-shrink:0}
-.ai-in textarea{flex:1;padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;max-height:75px;line-height:1.5;transition:border-color .18s}
+.ai-in textarea{flex:1;padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;max-height:120px;line-height:1.5;transition:border-color .18s}
 .ai-in textarea:focus{border-color:var(--red)}
 .send-btn{width:34px;height:34px;background:var(--red);border:none;border-radius:var(--rs);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .send-btn:hover{background:#a93226}.send-btn:disabled{background:var(--bd);cursor:not-allowed}
@@ -154,7 +154,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .modal p{color:var(--ink2);font-size:13px;line-height:1.7;margin-bottom:18px}
 .mbtns{display:flex;gap:7px}
 .btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
-@media(max-width:860px){.ai-col{width:300px}.g2{grid-template-columns:1fr}}
+@media(max-width:860px){.ai-col{width:380px}.g2{grid-template-columns:1fr}}
 @media(max-width:660px){
   /* AI 위, 글쓰기 아래 */
   .s-body{flex-direction:column}
@@ -171,7 +171,7 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
   }
   .ai-col.closed{height:44px !important}
   .ai-col:not(.closed){
-    height:52vh !important;
+    height:65vh !important;
     display:flex !important;
     flex-direction:column !important;
   }
@@ -1234,7 +1234,7 @@ async function sendAI(){
     reply=await callClaude([{role:'user',content:text}],sys);
     aiAnswer=reply;
   }catch(e){
-    reply=e.message==='API_KEY_MISSING'?'⚠️ AI 연결 중입니다. 잠시 후 다시 질문해보세요. 계속 안 되면 교사에게 문의하세요.':'❌ AI 연결 오류: '+e.message;
+    reply=e.message==='API_KEY_MISSING'?'⚠️ API 키 로드 중... 5초 후 다시 질문해보세요. (교사가 API 키를 저장했는지 확인)':'❌ AI 연결 오류: '+e.message;
   }
 
   if(!S.research[S.stage].aiQA)S.research[S.stage].aiQA=[];
