@@ -510,7 +510,7 @@ function switchTab(t){
   document.getElementById('tab-t').style.display=t==='t'?'block':'none';
 }
 
-function studentEnter(){
+async function studentEnter(){
   try{
   const name=document.getElementById('s-name').value.trim();
   const code=document.getElementById('s-code').value.trim().toUpperCase();
@@ -523,9 +523,17 @@ function studentEnter(){
   S.qualStars={content:0,structure:0,improvement:0,ai_utility:0};
   S.research={plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}};
   loadSettings();
+  // shared storage에서 API키 + Sheets URL await으로 로드
+  try{
+    const [kr,fr]=await Promise.all([
+      (!S.apiKey&&!localStorage.getItem('wp_key'))?window.storage.get('apikey_'+S.classCode,true):Promise.resolve(null),
+      (!S.formsUrl&&!localStorage.getItem('wp_forms'))?window.storage.get('formsUrl_'+S.classCode,true):Promise.resolve(null)
+    ]);
+    if(kr&&kr.value){S.apiKey=kr.value;localStorage.setItem('wp_key',kr.value);}
+    if(fr&&fr.value){S.formsUrl=fr.value;localStorage.setItem('wp_forms',fr.value);}
+  }catch(e){}
   show('pg-student');
   initOutline();initStars();
-  if(!S.apiKey&&!localStorage.getItem('wp_key')){window.storage.get('apikey_'+S.classCode,true).then(r=>{if(r&&r.value){S.apiKey=r.value;localStorage.setItem('wp_key',r.value);}}).catch(()=>{});}
   goStage('plan');renderAI();
   updateSub({stage:'plan'});
   }catch(e){toast('오류: '+e.message);console.error(e);}
@@ -580,11 +588,19 @@ function newCode(){
 function copyCode(){navigator.clipboard.writeText(S.classCode).then(()=>toast('복사됨: '+S.classCode))}
 function updateCard(s,on){S.ai[s]=on;document.getElementById('card-'+s).classList.toggle('on',on)}
 function saveSettings(){localStorage.setItem('wp_ai',JSON.stringify(S.ai));toast('✅ 설정 저장됨')}
-function saveForms(){
+async function saveForms(){
   const u=document.getElementById('forms-url').value.trim();
-  if(!u||!u.includes('google.com')){toast('올바른 Google URL을 입력하세요');return}
+  if(!u){toast('URL을 입력하세요');return}
   S.formsUrl=u;localStorage.setItem('wp_forms',u);
-  document.getElementById('forms-st').textContent='✅ 연동됨';toast('✅ Forms 저장됨');
+  // 학생들도 쓸 수 있도록 shared storage에 저장
+  try{
+    await window.storage.set('formsUrl_'+S.classCode,u,true);
+    document.getElementById('forms-st').textContent='✅ 연동됨 — 학생 자동 공유';
+    toast('✅ Google Sheets URL 저장됨! 학생 제출 시 자동 수집됩니다');
+  }catch(e){
+    document.getElementById('forms-st').textContent='✅ 연동됨';
+    toast('✅ Forms URL 저장됨');
+  }
 }
 function loadSettings(){
   const ai=localStorage.getItem('wp_ai');
@@ -1010,14 +1026,19 @@ async function submitFinal(){
           '초고내용':draftText,
           '최종글내용':finalText
         };
-        await fetch(S.formsUrl,{
+        const resp=await fetch(S.formsUrl,{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify(payload)
         });
-      }catch(e){console.log('Sheets 저장 오류:',e)}
+        toast('✅ 제출 완료! Google Sheets에 저장됐어요 🎉');
+      }catch(e){
+        console.log('Sheets 저장 오류:',e);
+        toast('✅ 제출됨 (Sheets 전송 실패: '+e.message+')');
+      }
+    } else {
+      toast('✅ 제출 완료! 수고했어요 🎉');
     }
-    toast('✅ 제출 완료! 수고했어요 🎉');
     renderSubs();
   });
 }
