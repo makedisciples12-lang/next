@@ -108,11 +108,14 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .prog{display:flex;gap:5px;align-items:center}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--bd);transition:all .3s}
 .pdot.done{background:var(--grn)}.pdot.cur{background:var(--red);width:18px;border-radius:3px}
-.bar-r{display:flex;gap:7px}
+.bar-r{display:flex;gap:7px;align-items:center}
 .btn-nav{padding:8px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;border:1.5px solid var(--bd);background:var(--sf);color:var(--ink)}
 .btn-nav:hover{border-color:var(--ink)}
 .btn-nxt{background:var(--ink);color:#fff;border-color:var(--ink)}.btn-nxt:hover{background:#2c2926}
 .btn-sub{background:var(--grn);color:#fff;border-color:var(--grn);display:none}.btn-sub:hover{background:#15803d}
+/* 자동저장 표시 */
+.autosave-badge{font-size:10px;color:var(--grn);font-weight:600;padding:3px 8px;background:var(--grn-lt);border-radius:10px;border:1px solid #bbf7d0;display:none}
+.autosave-badge.show{display:inline-block}
 .ai-col{width:480px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0;transition:width .25s;overflow:hidden}
 .ai-col.closed{width:44px}
 .ai-head{background:var(--ink);color:#fff;padding:0 13px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -156,36 +159,14 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
 .btn-out{background:none;border:1.5px solid var(--bd);color:var(--ink);padding:9px 16px;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
 @media(max-width:860px){.ai-col{width:380px}.g2{grid-template-columns:1fr}}
 @media(max-width:660px){
-  /* AI 위, 글쓰기 아래 */
   .s-body{flex-direction:column}
   .wcol{order:2;flex:1;min-height:0;overflow:hidden}
-  .ai-col{
-    order:1;
-    width:100% !important;
-    height:44px;
-    border-left:none;
-    border-bottom:1px solid var(--bd);
-    flex-shrink:0;
-    overflow:hidden;
-    transition:height .25s ease;
-  }
+  .ai-col{order:1;width:100% !important;height:44px;border-left:none;border-bottom:1px solid var(--bd);flex-shrink:0;overflow:hidden;transition:height .25s ease;}
   .ai-col.closed{height:44px !important}
-  .ai-col:not(.closed){
-    height:65vh !important;
-    display:flex !important;
-    flex-direction:column !important;
-  }
-  /* ai-body 내부 flex 구조 */
-  .ai-col:not(.closed) #ai-body{
-    flex:1 !important;
-    min-height:0 !important;
-    overflow:hidden !important;
-    display:flex !important;
-    flex-direction:column !important;
-  }
+  .ai-col:not(.closed){height:65vh !important;display:flex !important;flex-direction:column !important;}
+  .ai-col:not(.closed) #ai-body{flex:1 !important;min-height:0 !important;overflow:hidden !important;display:flex !important;flex-direction:column !important;}
   .ai-msgs{flex:1 !important;overflow-y:auto !important;min-height:0 !important}
   .ai-in,.qbtns,.mtabs,.ai-ok{flex-shrink:0 !important}
-  /* 네비 축소 */
   .snav{font-size:10px;padding:4px 6px}
   .snav-wrap{gap:1px}
 }
@@ -268,20 +249,50 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
         <strong style="display:block;margin-bottom:6px">📋 Apps Script 코드 (복사해서 배포하세요)</strong>
         <div style="background:var(--ink);color:#86efac;border-radius:var(--rs);padding:10px;font-family:monospace;font-size:11px;white-space:pre;overflow-x:auto;margin-bottom:6px">function doPost(e){
   try{
-    var s=SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet=SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var d=JSON.parse(e.postData.contents);
-    s.appendRow([d.학생이름,d.주제,d.제출시각,
-      d.계획글자수,d.개요글자수,d.초고글자수,d.최종글자수,d.글자변화율,
-      d.계획AI질문수,d.개요AI질문수,d.초고AI질문수,d.고쳐쓰기AI질문수,d.총AI질문수,
-      d.계획AI질문답변,d.개요AI질문답변,d.초고AI질문답변,d.고쳐쓰기AI질문답변,
-      d.AI답변최종글유사도,d.초고최종글유사도,
-      d.지식수준,d.지식수준설명,d.KL단계별상세,
-      d.글질_내용,d.글질_구조,d.글질_향상,d.글질_AI활용,d.글질_평균,
-      d.AI활용반성,
-      d.계획_주제,d.계획_목적,d.계획_독자,d.계획_핵심주장,
-      d.계획_AI메모,d.계획_추가메모,d.계획_형식,
-      d.개요내용,d.초고내용,d.최종글내용,
-      d.discTeam,d.discUttCount,d.discUttText]);
+    var name=d['학생이름']||'';
+    if(!name) return ContentService.createTextOutput('error:no name');
+
+    // 헤더가 없으면 첫 행에 생성
+    if(sheet.getLastRow()===0){
+      sheet.appendRow(['학생이름','주제','제출시각','현재단계',
+        '계획글자수','개요글자수','초고글자수','최종글자수','글자변화율',
+        '계획AI질문수','개요AI질문수','초고AI질문수','고쳐쓰기AI질문수','총AI질문수',
+        '계획AI질문답변','개요AI질문답변','초고AI질문답변','고쳐쓰기AI질문답변',
+        'AI답변최종글유사도','초고최종글유사도',
+        '지식수준','지식수준설명','KL단계별상세',
+        '글질_내용','글질_구조','글질_향상','글질_AI활용','글질_평균',
+        'AI활용반성','계획_주제','계획_목적','계획_독자','계획_핵심주장',
+        '계획_AI메모','계획_추가메모','계획_형식',
+        '개요내용','초고내용','최종글내용',
+        'discTeam','discUttCount','discUttText']);
+    }
+
+    // 같은 이름의 행이 있으면 덮어쓰기, 없으면 새 행 추가
+    var data=sheet.getDataRange().getValues();
+    var rowIdx=-1;
+    for(var i=1;i<data.length;i++){
+      if(data[i][0]===name){rowIdx=i+1;break;}
+    }
+
+    var row=[name,d['주제'],d['제출시각'],d['현재단계']||'',
+      d['계획글자수'],d['개요글자수'],d['초고글자수'],d['최종글자수'],d['글자변화율'],
+      d['계획AI질문수'],d['개요AI질문수'],d['초고AI질문수'],d['고쳐쓰기AI질문수'],d['총AI질문수'],
+      d['계획AI질문답변'],d['개요AI질문답변'],d['초고AI질문답변'],d['고쳐쓰기AI질문답변'],
+      d['AI답변최종글유사도'],d['초고최종글유사도'],
+      d['지식수준'],d['지식수준설명'],d['KL단계별상세'],
+      d['글질_내용'],d['글질_구조'],d['글질_향상'],d['글질_AI활용'],d['글질_평균'],
+      d['AI활용반성'],d['계획_주제'],d['계획_목적'],d['계획_독자'],d['계획_핵심주장'],
+      d['계획_AI메모'],d['계획_추가메모'],d['계획_형식'],
+      d['개요내용'],d['초고내용'],d['최종글내용'],
+      d['discTeam'],d['discUttCount'],d['discUttText']];
+
+    if(rowIdx>0){
+      sheet.getRange(rowIdx,1,1,row.length).setValues([row]);
+    } else {
+      sheet.appendRow(row);
+    }
     return ContentService.createTextOutput('ok');
   }catch(err){
     return ContentService.createTextOutput('error:'+err.message);
@@ -295,6 +306,7 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
     </div>
     <div class="tc">
       <h3>🔬 연구 데이터</h3>
+      <p class="tc-sub" style="color:var(--amb)">⚠️ 같은 기기 브라우저에서 학생 입장 후 교사 패널로 전환하면 데이터가 보입니다. 다른 기기에서는 Google Sheets 연동을 사용하세요.</p>
       <div id="res-summary" style="margin-bottom:12px"></div>
       <div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
         <button class="btn-sm grn" onclick="exportCSV()">📥 CSV 다운로드</button>
@@ -321,7 +333,11 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
       <button class="snav" id="snav-draft" onclick="goStage('draft')">✏️ 초고쓰기</button>
       <button class="snav" id="snav-revise" onclick="goStage('revise')">🔍 고쳐쓰기</button>
     </nav>
-    <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700">🎙️ 팀 토의</button><button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="autosave-badge" id="autosave-badge">✅ 자동저장됨</span>
+      <button onclick="toggleDiscPanel()" style="font-size:11px;padding:5px 11px;background:var(--pur);color:#fff;border:none;border-radius:var(--rs);cursor:pointer;font-family:inherit;font-weight:700">🎙️ 팀 토의</button>
+      <button class="btn-out" onclick="goLogin()" style="font-size:11px;padding:5px 11px">나가기</button>
+    </div>
   </header>
   <div class="s-body">
     <div class="wcol">
@@ -332,21 +348,21 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
         <div class="wscroll">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
             <div style="display:flex;flex-direction:column;gap:10px">
-              <div class="pc"><label>✦ 글쓰기 주제</label><input id="p-topic" placeholder="무엇에 대해 쓸 건가요?" oninput="trackC('plan')"></div>
-              <div class="pc"><label>✦ 글의 목적</label><textarea id="p-purpose" rows="2" placeholder="설득, 정보 전달…" oninput="trackC('plan')"></textarea></div>
-              <div class="pc"><label>✦ 예상 독자</label><textarea id="p-reader" rows="2" placeholder="누가 읽나요?" oninput="trackC('plan')"></textarea></div>
-              <div class="pc"><label>✦ 핵심 주장</label><textarea id="p-idea" rows="2" placeholder="이 글에서 가장 하고 싶은 말은?" oninput="trackC('plan')"></textarea></div>
-              <div class="pc"><label>✦ 분량·형식</label><textarea id="p-format" rows="2" placeholder="에세이, 논설문… 몇 자?" oninput="trackC('plan')"></textarea></div>
+              <div class="pc"><label>✦ 글쓰기 주제</label><input id="p-topic" placeholder="무엇에 대해 쓸 건가요?" oninput="trackC('plan');autoSave()"></div>
+              <div class="pc"><label>✦ 글의 목적</label><textarea id="p-purpose" rows="2" placeholder="설득, 정보 전달…" oninput="trackC('plan');autoSave()"></textarea></div>
+              <div class="pc"><label>✦ 예상 독자</label><textarea id="p-reader" rows="2" placeholder="누가 읽나요?" oninput="trackC('plan');autoSave()"></textarea></div>
+              <div class="pc"><label>✦ 핵심 주장</label><textarea id="p-idea" rows="2" placeholder="이 글에서 가장 하고 싶은 말은?" oninput="trackC('plan');autoSave()"></textarea></div>
+              <div class="pc"><label>✦ 분량·형식</label><textarea id="p-format" rows="2" placeholder="에세이, 논설문… 몇 자?" oninput="trackC('plan');autoSave()"></textarea></div>
             </div>
             <div class="pc" style="display:flex;flex-direction:column">
               <label>✦ AI 조사 내용 메모</label>
               <div style="font-size:10px;color:var(--ink3);margin-bottom:6px;line-height:1.5">AI에게 받은 자료를 자신의 말로 정리하세요.<br><strong style="color:var(--pur)">KL 문장 분석의 비교 기준</strong>이 됩니다.</div>
-              <textarea id="p-ref" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="예) 독일: 2023년 원전 완전 폐쇄&#10;이유: 안전 우려, 재생에너지 전환&#10;&#10;벨기에: 2025년 단계 폐쇄…" oninput="trackC('plan')"></textarea>
+              <textarea id="p-ref" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="예) 독일: 2023년 원전 완전 폐쇄&#10;이유: 안전 우려, 재생에너지 전환&#10;&#10;벨기에: 2025년 단계 폐쇄…" oninput="trackC('plan');autoSave()"></textarea>
             </div>
             <div class="pc" style="display:flex;flex-direction:column">
               <label>✦ 추가 메모 / 아이디어</label>
               <div style="font-size:10px;color:var(--ink3);margin-bottom:6px">반론, 추가 조사, 자유 아이디어</div>
-              <textarea id="p-memo2" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="반론, 추가 조사할 것들…" oninput="trackC('plan')"></textarea>
+              <textarea id="p-memo2" style="flex:1;min-height:260px;width:100%;border:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);background:transparent;resize:none;line-height:1.8" placeholder="반론, 추가 조사할 것들…" oninput="trackC('plan');autoSave()"></textarea>
             </div>
           </div>
         </div>
@@ -376,7 +392,7 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
           </div>
           <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
             <div class="wscroll">
-              <textarea id="draft-ta" class="big-ta" placeholder="여기에 초고를 작성해 보세요…&#10;&#10;왼쪽 개요를 보면서 각 항목을 글로 풀어써 보세요." oninput="trackC('draft');cntWC('draft')"></textarea>
+              <textarea id="draft-ta" class="big-ta" placeholder="여기에 초고를 작성해 보세요…&#10;&#10;왼쪽 개요를 보면서 각 항목을 글로 풀어써 보세요." oninput="trackC('draft');cntWC('draft');autoSave()"></textarea>
               <div style="font-size:11px;color:var(--ink3);text-align:right"><span id="draft-wc">0</span>자</div>
             </div>
           </div>
@@ -390,7 +406,7 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
           <div style="background:var(--blu-lt);border:1px solid #bfdbfe;border-radius:var(--rs);padding:9px 13px;font-size:12px;color:var(--blu)">
             ✏️ 초고를 직접 고쳐 쓰세요. AI에게 문단별 피드백을 요청할 수도 있어요.
           </div>
-          <textarea id="revise-ta" class="big-ta" placeholder="초고를 불러오거나 직접 수정해 보세요…" oninput="trackC('revise');cntWC('revise')"></textarea>
+          <textarea id="revise-ta" class="big-ta" placeholder="초고를 불러오거나 직접 수정해 보세요…" oninput="trackC('revise');cntWC('revise');autoSave()"></textarea>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:2px">
             <span style="font-size:11px;color:var(--ink3)"><span id="revise-wc">0</span>자</span>
             <span id="revise-diff" style="display:none;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px"></span>
@@ -406,7 +422,7 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
           <!-- AI 활용 반성 -->
           <div style="background:var(--teal-lt);border:1.5px solid #99f6e4;border-radius:var(--rs);padding:13px 15px">
             <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">💭 AI 활용 반성 <span style="font-size:10px;font-weight:400">— 연구 데이터로 수집</span></div>
-            <textarea id="ai-reflection" style="width:100%;height:70px;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;background:#fff;color:var(--ink);line-height:1.6" placeholder="AI를 어떻게 활용했나요? 어떤 내용을 참고하고 어떻게 바꿔 썼는지 적어주세요."></textarea>
+            <textarea id="ai-reflection" style="width:100%;height:70px;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:var(--rs);font-family:inherit;font-size:12px;resize:none;outline:none;background:#fff;color:var(--ink);line-height:1.6" placeholder="AI를 어떻게 활용했나요? 어떤 내용을 참고하고 어떻게 바꿔 썼는지 적어주세요." oninput="autoSave()"></textarea>
             <div style="font-size:11px;color:var(--teal);margin-top:4px">솔직하게 작성할수록 좋은 연구 자료가 됩니다 😊</div>
           </div>
           <!-- KL 분석 -->
@@ -473,16 +489,202 @@ const QUICK={
 
 const S={
   name:'',topic:'',stage:'plan',aiOpen:true,classCode:'WRITE1',
-  formsUrl:'https://script.google.com/macros/s/AKfycbzhVaSWz2fRZ5TAl9keSV22XKGiQAhmz4E7XfLrRn97iLeIEnh0k9DHxi2jbv2NDQcfIQ/exec',
+  formsUrl:'',
   done:{plan:false,outline:false,draft:false,revise:false},
   ai:{plan:true,outline:true,draft:false,revise:true},
   qualStars:{content:0,structure:0,improvement:0,ai_utility:0},
   research:{plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}}
 };
 
+// ═══════════════════════════════════════════════════
+// 자동저장 시스템 (새로고침 복구 + Sheets 실시간 전송)
+// ═══════════════════════════════════════════════════
+
+let _autoSaveTimer=null;
+let _sheetsTimer=null;   // Sheets 전송은 더 느리게 (3초 debounce)
+const SAVE_KEY='wp_student_draft';
+
+// 학생 입력 전체를 localStorage에 저장하고 Sheets에도 전송
+function autoSave(){
+  if(!S.name)return;
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer=setTimeout(()=>{
+    const data={
+      name:S.name,topic:S.topic,stage:S.stage,
+      classCode:S.classCode,
+      savedAt:new Date().toISOString(),
+      plan:{
+        topic:document.getElementById('p-topic')?.value||'',
+        purpose:document.getElementById('p-purpose')?.value||'',
+        reader:document.getElementById('p-reader')?.value||'',
+        idea:document.getElementById('p-idea')?.value||'',
+        ref:document.getElementById('p-ref')?.value||'',
+        memo2:document.getElementById('p-memo2')?.value||'',
+        format:document.getElementById('p-format')?.value||''
+      },
+      outline:[...(document.querySelectorAll('#ol-wrap .ol-ta')||[])].map(ta=>ta.value),
+      draft:document.getElementById('draft-ta')?.value||'',
+      revise:document.getElementById('revise-ta')?.value||'',
+      reflection:document.getElementById('ai-reflection')?.value||'',
+      research:S.research,
+      done:S.done,
+      qualStars:S.qualStars
+    };
+    // ① localStorage 저장 (새로고침 복구용)
+    localStorage.setItem(SAVE_KEY+'_'+S.name,JSON.stringify(data));
+    // ② 로컬 연구 패널 업데이트
+    updateSub({research:S.research,done:S.done,qualStars:S.qualStars,
+      planData:{topic:data.plan.topic,purpose:data.plan.purpose,reader:data.plan.reader,idea:data.plan.idea,ref:data.plan.ref,format:data.plan.format},
+      draftText:data.draft,finalText:data.revise||data.draft,
+      reflection:data.reflection
+    });
+    showAutosaveBadge('local');
+    // ③ Sheets 전송 (3초 debounce — 너무 자주 보내지 않도록)
+    clearTimeout(_sheetsTimer);
+    _sheetsTimer=setTimeout(()=>sendProgressToSheets(data),3000);
+  },600);
+}
+
+// Sheets에 진행 중 데이터 전송 (덮어쓰기 방식)
+async function sendProgressToSheets(data){
+  let fUrl=S.formsUrl||localStorage.getItem('wp_forms')||'';
+  if(!fUrl){
+    try{const fr=await window.storage.get('formsUrl_'+S.classCode,true);if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;localStorage.setItem('wp_forms',fUrl);}}catch(e){}
+  }
+  if(!fUrl)return; // URL 없으면 조용히 스킵
+
+  const q=STAGES.map(s=>S.research[s]?.aiQA?.length||0);
+  const qaByStage=STAGES.reduce((o,s)=>{
+    o[s]=(S.research[s].aiQA||[]).map(x=>'Q:'+x.q+'|A:'+(x.a||'').slice(0,100)).join(';;');
+    return o;
+  },{});
+  const dc=S.research.draft.chars||0,rc=S.research.revise.chars||0;
+  const chg=dc>0?Math.round((rc-dc)/dc*100)+'%':'0%';
+  const qs=S.qualStars||{};
+  const qavg=Object.values(qs).filter(v=>v>0).length
+    ?Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10:'';
+  const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+  const olLabels=['서론','본론1','본론2','본론3','결론'];
+  const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
+
+  const payload={
+    '학생이름':S.name,
+    '주제':S.topic,
+    '제출시각':'진행중 — '+new Date().toLocaleString('ko-KR'),
+    '현재단계':SN[S.stage]||S.stage,
+    '계획글자수':S.research.plan.chars||0,
+    '개요글자수':S.research.outline.chars||0,
+    '초고글자수':dc,
+    '최종글자수':rc,
+    '글자변화율':chg,
+    '계획AI질문수':q[0],'개요AI질문수':q[1],'초고AI질문수':q[2],'고쳐쓰기AI질문수':q[3],
+    '총AI질문수':q.reduce((a,b)=>a+b,0),
+    '계획AI질문답변':qaByStage.plan.slice(0,600),
+    '개요AI질문답변':qaByStage.outline.slice(0,600),
+    '초고AI질문답변':qaByStage.draft.slice(0,600),
+    '고쳐쓰기AI질문답변':qaByStage.revise.slice(0,600),
+    'AI답변최종글유사도':'미제출',
+    '초고최종글유사도':'미제출',
+    '지식수준':'미제출','지식수준설명':'','KL단계별상세':'',
+    '글질_내용':qs.content||0,'글질_구조':qs.structure||0,
+    '글질_향상':qs.improvement||0,'글질_AI활용':qs.ai_utility||0,'글질_평균':qavg,
+    'AI활용반성':data.reflection||'',
+    '계획_주제':data.plan.topic,'계획_목적':data.plan.purpose,
+    '계획_독자':data.plan.reader,'계획_핵심주장':data.plan.idea,
+    '계획_AI메모':(data.plan.ref||'').slice(0,500),
+    '계획_추가메모':(data.plan.memo2||'').slice(0,300),
+    '계획_형식':data.plan.format,
+    '개요내용':outlineText.slice(0,800),
+    '초고내용':data.draft||'',
+    '최종글내용':data.revise||data.draft||'',
+    'discTeam':'','discUttCount':0,'discUttText':'',
+    // 덮어쓰기 신호 — Apps Script가 이 키로 기존 행을 찾아 업데이트
+    '_mode':'upsert'
+  };
+  try{
+    // no-cors: 응답을 못 읽지만 전송은 됨
+    fetch(fUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    showAutosaveBadge('sheets');
+  }catch(e){/* 네트워크 오류 무시 — 다음 저장에 재시도 */}
+}
+
+function showAutosaveBadge(mode){
+  const badge=document.getElementById('autosave-badge');
+  if(!badge)return;
+  badge.textContent=mode==='sheets'?'☁️ Sheets 전송됨':'✅ 자동저장됨';
+  badge.classList.add('show');
+  clearTimeout(badge._hideTimer);
+  badge._hideTimer=setTimeout(()=>badge.classList.remove('show'),2500);
+}
+
+// 저장된 데이터 복구
+function restoreAutoSave(){
+  if(!S.name)return false;
+  const raw=localStorage.getItem(SAVE_KEY+'_'+S.name);
+  if(!raw)return false;
+  try{
+    const data=JSON.parse(raw);
+    if(data.name!==S.name)return false;
+
+    // 계획하기 복구
+    if(data.plan){
+      const fields=['topic','purpose','reader','idea','ref','memo2','format'];
+      const ids=['p-topic','p-purpose','p-reader','p-idea','p-ref','p-memo2','p-format'];
+      fields.forEach((f,i)=>{const el=document.getElementById(ids[i]);if(el&&data.plan[f])el.value=data.plan[f];});
+    }
+
+    // 개요쓰기 복구 (타이밍 문제로 약간 지연)
+    if(data.outline&&data.outline.length){
+      setTimeout(()=>{
+        const tas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+        data.outline.forEach((v,i)=>{if(tas[i]&&v)tas[i].value=v;});
+        trackC('outline');
+      },200);
+    }
+
+    // 초고 복구
+    if(data.draft){const el=document.getElementById('draft-ta');if(el){el.value=data.draft;cntWC('draft');}}
+
+    // 고쳐쓰기 복구
+    if(data.revise){const el=document.getElementById('revise-ta');if(el){el.value=data.revise;cntWC('revise');}}
+    if(data.reflection){const el=document.getElementById('ai-reflection');if(el)el.value=data.reflection;}
+
+    // 메타 데이터 복구
+    if(data.research)S.research=data.research;
+    if(data.done)S.done=data.done;
+    if(data.qualStars){
+      S.qualStars=data.qualStars;
+      // 별점 UI 복구
+      Object.entries(data.qualStars).forEach(([k,v])=>{if(v>0)setStar(k,v);});
+    }
+
+    // 주제 복구
+    if(data.plan&&data.plan.topic)S.topic=data.plan.topic;
+
+    // 단계 복구
+    if(data.stage&&data.stage!=='plan'){
+      setTimeout(()=>goStage(data.stage),100);
+    }
+
+    const ago=data.savedAt?timeSince(data.savedAt):'방금 전';
+    toast('💾 이전 작업 복구됨 ('+ago+')');
+    return true;
+  }catch(e){console.error('복구 오류:',e);return false;}
+}
+
+function timeSince(iso){
+  const diff=Date.now()-new Date(iso).getTime();
+  const m=Math.floor(diff/60000);
+  if(m<1)return'방금 전';
+  if(m<60)return m+'분 전';
+  const h=Math.floor(m/60);
+  if(h<24)return h+'시간 전';
+  return Math.floor(h/24)+'일 전';
+}
+
+// ═══════════════════════════════════════════════════
+
 async function callClaude(messages,system,maxTok=1000){
-  // 1순위: 본인 로컬 저장 키
-  // 2순위: 교사가 공유 저장소에 올린 키 (같은 수업코드)
   let key=S.apiKey||localStorage.getItem('wp_key')||'';
   if(!key){
     try{
@@ -518,37 +720,40 @@ function switchTab(t){
 
 async function studentEnter(){
   try{
-  const name=document.getElementById('s-name').value.trim();
-  const code=document.getElementById('s-code').value.trim().toUpperCase();
-  const topic=document.getElementById('s-topic').value.trim();
-  if(!name){toast('이름을 입력해주세요');return}
-  if(code!==S.classCode){toast('코드가 올바르지 않습니다');return}
-  S.name=name;S.topic=topic||'자유 주제';
-  document.getElementById('badge-nm').textContent='— '+name+' 학생';
-  if(topic){const el=document.getElementById('p-topic');if(el)el.value=topic;}
-  S.qualStars={content:0,structure:0,improvement:0,ai_utility:0};
-  S.research={plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}};
-  loadSettings();
-  // shared storage에서 API키 + Sheets URL await으로 로드
-  try{
-    const [kr,fr]=await Promise.all([
-      (!S.apiKey&&!localStorage.getItem('wp_key'))?window.storage.get('apikey_'+S.classCode,true):Promise.resolve(null),
-      (!S.formsUrl&&!localStorage.getItem('wp_forms'))?window.storage.get('formsUrl_'+S.classCode,true):Promise.resolve(null)
-    ]);
-    if(kr&&kr.value){S.apiKey=kr.value;localStorage.setItem('wp_key',kr.value);}
-    if(fr&&fr.value){S.formsUrl=fr.value;localStorage.setItem('wp_forms',fr.value);}
-  }catch(e){}
-  show('pg-student');
-  initOutline();initStars();
-  goStage('plan');renderAI();
-  updateSub({stage:'plan'});
+    const name=document.getElementById('s-name').value.trim();
+    const code=document.getElementById('s-code').value.trim().toUpperCase();
+    const topic=document.getElementById('s-topic').value.trim();
+    if(!name){toast('이름을 입력해주세요');return}
+    if(code!==S.classCode){toast('코드가 올바르지 않습니다');return}
+    S.name=name;S.topic=topic||'자유 주제';
+    document.getElementById('badge-nm').textContent='— '+name+' 학생';
+    if(topic){const el=document.getElementById('p-topic');if(el)el.value=topic;}
+    S.qualStars={content:0,structure:0,improvement:0,ai_utility:0};
+    S.research={plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}};
+    loadSettings();
+    // shared storage에서 API키 + Sheets URL 로드
+    try{
+      const [kr,fr]=await Promise.all([
+        (!S.apiKey&&!localStorage.getItem('wp_key'))?window.storage.get('apikey_'+S.classCode,true):Promise.resolve(null),
+        window.storage.get('formsUrl_'+S.classCode,true)
+      ]);
+      if(kr&&kr.value){S.apiKey=kr.value;localStorage.setItem('wp_key',kr.value);}
+      if(fr&&fr.value){S.formsUrl=fr.value;localStorage.setItem('wp_forms',fr.value);}
+    }catch(e){}
+    show('pg-student');
+    initOutline();initStars();
+    goStage('plan');renderAI();
+    updateSub({stage:'plan'});
+
+    // 이전 작업 복구 시도
+    setTimeout(()=>restoreAutoSave(),300);
   }catch(e){toast('오류: '+e.message);console.error(e);}
 }
 
 function teacherEnter(){
   try{
-  if(document.getElementById('t-pw').value!=='teacher123'){toast('비밀번호 오류');return}
-  loadSettings();renderSubs();show('pg-teacher');
+    if(document.getElementById('t-pw').value!=='teacher123'){toast('비밀번호 오류');return}
+    loadSettings();renderSubs();show('pg-teacher');
   }catch(e){toast('오류: '+e.message);console.error(e);}
 }
 
@@ -557,7 +762,6 @@ async function saveApiKey(){
   if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키 형식이 아닙니다 (sk-ant-... 로 시작)');return}
   S.apiKey=k;
   localStorage.setItem('wp_key',k);
-  // 같은 수업 코드 학생들도 쓸 수 있도록 공유 저장소에 저장
   try{
     await window.storage.set('apikey_'+S.classCode,k,true);
     document.getElementById('api-key-status').textContent='✅ 저장됨 (학생들과 공유됨)';
@@ -580,12 +784,6 @@ async function testApiKey(){
     st.textContent='❌ 연결 실패: '+e.message;toast('❌ 연결 실패');
   }
 }
-function saveStudentKey(){
-  const k=document.getElementById('student-api-input')?.value?.trim();
-  if(!k||!k.startsWith('sk-ant-')){toast('올바른 API 키를 입력하세요');return}
-  S.apiKey=k;localStorage.setItem('wp_key',k);
-  renderAI();toast('✅ API 키 저장됨. 이제 AI와 대화할 수 있어요!');
-}
 function newCode(){
   S.classCode=[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'].sort(()=>Math.random()-.5).slice(0,6).join('');
   document.getElementById('cur-code').textContent=S.classCode;
@@ -598,7 +796,6 @@ async function saveForms(){
   const u=document.getElementById('forms-url').value.trim();
   if(!u){toast('URL을 입력하세요');return}
   S.formsUrl=u;localStorage.setItem('wp_forms',u);
-  // 학생들도 쓸 수 있도록 shared storage에 저장
   try{
     await window.storage.set('formsUrl_'+S.classCode,u,true);
     document.getElementById('forms-st').textContent='✅ 연동됨 — 학생 자동 공유';
@@ -659,6 +856,10 @@ function renderSubs(){
           <div class="dc"><h4>지식 수준 (KL)</h4><p>${r.klDetail||'미분석'}</p></div>
           <div class="dc"><h4>AI 활용 반성</h4><p style="font-size:11px;color:var(--ink2)">${r.reflection||'작성 안 함'}</p></div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          <div class="dc"><h4>초고 내용 (앞 200자)</h4><p style="font-size:11px;color:var(--ink2);white-space:pre-wrap">${(r.draftText||'없음').slice(0,200)}</p></div>
+          <div class="dc"><h4>최종 글 내용 (앞 200자)</h4><p style="font-size:11px;color:var(--ink2);white-space:pre-wrap">${(r.finalText||'없음').slice(0,200)}</p></div>
+        </div>
         ${r.klSentences?`<div class="dc" style="margin-top:8px"><h4>문장별 KL 분류</h4><p style="font-size:11px;color:var(--ink2)">${r.klSentences.slice(0,200)}...</p></div>`:''}
       </div>
     </td></tr>`;
@@ -675,7 +876,7 @@ function exportCSV(){
     '계획AI질문답변','개요AI질문답변','초고AI질문답변','고쳐쓰기AI질문답변',
     'AI답변↔최종글유사도','초고↔최종글유사도','지식수준','지식수준설명',
     '글질_내용(1-5)','글질_구조(1-5)','글질_향상(1-5)','글질_AI활용(1-5)','글질_평균',
-    'AI활용반성','계획유사도','개요유사도','초고유사도','고쳐쓰기유사도','전체평균유사도','KL_단계별상세',
+    'AI활용반성','KL_단계별상세',
     '팀토의_팀이름','팀토의_발화수','팀토의_발화전체',
     '제출여부','제출시각',
     '계획하기_주제','계획하기_목적','계획하기_독자','계획하기_핵심주장','계획하기_AI메모','계획하기_형식',
@@ -693,7 +894,7 @@ function exportCSV(){
       ...q,q.reduce((a,b)=>a+b,0),...qa,
       r.similarity!=null?r.similarity+'%':'미분석',r.draftSimilarity!=null?r.draftSimilarity+'%':'미분석',r.kl||'',r.klDetail||'',
       qs.content||0,qs.structure||0,qs.improvement||0,qs.ai_utility||0,qavg,
-      r.reflection||'',(r.stageSim?.plan?.sim!=null?r.stageSim.plan.sim+'%':''),(r.stageSim?.outline?.sim!=null?r.stageSim.outline.sim+'%':''),(r.stageSim?.draft?.sim!=null?r.stageSim.draft.sim+'%':''),(r.stageSim?.revise?.sim!=null?r.stageSim.revise.sim+'%':''),(r.stageSim?.overall!=null?r.stageSim.overall+'%':''),r.klDetail||'',
+      r.reflection||'',r.klDetail||'',
       r.discTeam||'',r.discUttCount||0,r.discUttText||'',
       r.submitted?'제출':'진행중',r.submitTime||'',
       r.planData?.topic||'',r.planData?.purpose||'',r.planData?.reader||'',
@@ -701,7 +902,7 @@ function exportCSV(){
       r.outlineData||'',
       r.draftText||'',r.finalText||''];
   });
-    const csv='\uFEFF'+[H,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csv='\uFEFF'+[H,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download='글쓰기연구_'+new Date().toLocaleDateString('ko-KR').replace(/[\s.]/g,'')+'.csv';
@@ -718,6 +919,7 @@ function goStage(s){
   if(s==='revise')syncRevise();
   if(s==='draft')updateOLPreview();
   renderAI();updateBottom();updateSub({stage:s});
+  autoSave();
 }
 function nextStage(){const i=STAGES.indexOf(S.stage);if(i<STAGES.length-1){S.done[S.stage]=true;goStage(STAGES[i+1])}updateDots()}
 function prevStage(){const i=STAGES.indexOf(S.stage);if(i>0)goStage(STAGES[i-1])}
@@ -760,7 +962,7 @@ function trackC(stage){
   if(stage==='plan'){['p-topic','p-purpose','p-reader','p-idea','p-ref','p-format','p-memo2'].forEach(id=>{const el=document.getElementById(id);if(el)c+=el.value.replace(/\s/g,'').length})}
   else if(stage==='outline'){document.querySelectorAll('#ol-wrap .ol-ta').forEach(el=>c+=el.value.replace(/\s/g,'').length)}
   else{const el=document.getElementById(stage+'-ta');if(el)c=el.value.replace(/\s/g,'').length}
-  S.research[stage].chars=c;updateSub({research:S.research});
+  S.research[stage].chars=c;
 }
 
 // OUTLINE
@@ -783,12 +985,15 @@ function initOutline(){
       +'<div style="display:flex;align-items:center;gap:7px">'
       +'<div style="width:22px;height:22px;background:'+cfg.color+';color:#fff;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">'+(i+1)+'</div>'
       +'<strong style="font-size:13px">'+cfg.label+'</strong></div>'
-      +(canDel?'<button onclick="this.closest("[data-ol-card]").remove()" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1">×</button>':'')
+      +(canDel?'<button onclick="this.closest(\'[data-ol-card]\').remove()" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1">×</button>':'')
       +'</div>'
       +'<div style="font-size:10px;color:var(--ink3)">'+cfg.hint+'</div>'
       +'<textarea class="ol-ta" rows="4" style="width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;line-height:1.8;min-height:100px"'
-      +' placeholder="'+cfg.hint+' 내용을 입력하세요…"'
-      +' oninput="trackC("outline")" onfocus="this.style.borderColor="var(--red)"" onblur="this.style.borderColor="var(--bd)""></textarea>';
+      +' placeholder="'+cfg.hint+' 내용을 입력하세요…"></textarea>';
+    const ta=div.querySelector('.ol-ta');
+    ta.addEventListener('input',function(){trackC('outline');autoSave();this.style.height='auto';this.style.height=this.scrollHeight+'px'});
+    ta.addEventListener('focus',function(){this.style.borderColor='var(--red)'});
+    ta.addEventListener('blur',function(){this.style.borderColor='var(--bd)'});
     wrap.appendChild(div);
   });
 }
@@ -803,7 +1008,7 @@ function addOLCard(){
   const ta=document.createElement('textarea');
   ta.className='ol-ta';ta.rows=4;ta.placeholder='내용을 입력하세요…';
   ta.style.cssText='width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;line-height:1.8;min-height:100px';
-  ta.addEventListener('input',function(){trackC('outline');this.style.height='auto';this.style.height=this.scrollHeight+'px'});
+  ta.addEventListener('input',function(){trackC('outline');autoSave();this.style.height='auto';this.style.height=this.scrollHeight+'px'});
   ta.addEventListener('focus',function(){this.style.borderColor='var(--red)'});
   ta.addEventListener('blur',function(){this.style.borderColor='var(--bd)'});
   div.appendChild(header);div.appendChild(ta);wrap.appendChild(div);
@@ -842,6 +1047,7 @@ function setStar(key,val){
   S.qualStars[key]=val;
   document.querySelectorAll('.qs[data-k="'+key+'"] button').forEach((btn,i)=>{btn.textContent=i<val?'★':'☆'});
   updateSub({qualStars:S.qualStars});
+  autoSave();
 }
 
 // KL
@@ -863,7 +1069,6 @@ async function analyzeSentences(){
   if(!finalText||finalText.trim().length<20){toast('분석할 글이 너무 짧습니다');return}
   const btn=document.getElementById('kl-sen-btn');btn.textContent='🔄 분석 중…';btn.disabled=true;
   const aiMemo=document.getElementById('p-ref')?.value||'';
-  const allQA=STAGES.flatMap(s=>S.research[s].aiQA||[]);
   try{
     const prompt=`학생 글을 Bereiter & Scardamalia(1987) 지식 모델로 문장별 분류해주세요.
 
@@ -932,11 +1137,9 @@ async function submitFinal(){
 
     if(klResult)renderKL(klResult);
 
-    // simResult는 이제 {aiVsFinal, draftVsFinal} 객체
     const aiSim=simResult?.aiVsFinal??null;
     const draftSim=simResult?.draftVsFinal??null;
 
-    // 계획하기 내용 수집
     const planData={
       topic:document.getElementById('p-topic')?.value||'',
       purpose:document.getElementById('p-purpose')?.value||'',
@@ -945,17 +1148,13 @@ async function submitFinal(){
       ref:document.getElementById('p-ref')?.value||'',
       format:document.getElementById('p-format')?.value||''
     };
-    // 개요쓰기 내용 수집
     const outlineTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
     const outlineData=outlineTas.map((ta,i)=>{
       const labels=['서론','본론1','본론2','본론3','결론'];
       return (labels[i]||('항목'+(i+1)))+': '+ta.value.trim();
     }).filter(t=>t.split(': ')[1]).join('\n');
 
-    // 팀 토의 발화 수집
-    var discUttText='';
-    var discUttCount=0;
-    var discUttDetail=[];
+    var discUttText='',discUttCount=0,discUttDetail=[];
     if(DS.utterances&&DS.utterances.length){
       discUttCount=DS.utterances.length;
       discUttText=DS.utterances.map(function(u,i){return '['+(i+1)+']'+u.speaker+': '+u.text+(u.code?' ['+u.code+']':'');}).join(' || ');
@@ -966,7 +1165,7 @@ async function submitFinal(){
       similarity:aiSim,
       draftSimilarity:draftSim,
       qualStars:S.qualStars,
-      kl:klResult?'Knowledge '+klResult.dominant:'',klDetail:klResult?.comment||'',stageSim:klResult?.stageSim||{},klSentenceDetails:klResult?.sentenceDetails||[],
+      kl:klResult?'Knowledge '+klResult.dominant:'',klDetail:klResult?.comment||'',stageSim:klResult?.stageSim||{},
       planData,outlineData,
       discTeam:DS.teamName||'',
       discUttCount:discUttCount,
@@ -977,125 +1176,73 @@ async function submitFinal(){
     if(S.formsUrl){
       try{
         const tq=STAGES.reduce((a,s)=>a+(S.research[s].aiQA?.length||0),0);
-        const qaStr=allQA.map(qa=>'Q:'+qa.q+'|A:'+(qa.a||'').slice(0,100)).join(';;');
         const qs=S.qualStars;
         const qa=Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10;
         const dc=S.research.draft.chars,rc=S.research.revise.chars;
         const chg=dc>0?Math.round((rc-dc)/dc*100)+'%':'0%';
-        // 단계별 AI 질문/답변 분리
-          const qaByStage=STAGES.reduce((o,s)=>{
-            o[s]=(S.research[s].aiQA||[]).map(x=>'Q:'+x.q+'|A:'+(x.a||'').slice(0,150)).join(';;');
-            return o;
-          },{});
-          // 계획하기 내용
-          const planTopic=document.getElementById('p-topic')?.value||'';
-          const planPurpose=document.getElementById('p-purpose')?.value||'';
-          const planReader=document.getElementById('p-reader')?.value||'';
-          const planIdea=document.getElementById('p-idea')?.value||'';
-          const planRef=document.getElementById('p-ref')?.value||'';
-          const planFormat=document.getElementById('p-format')?.value||'';
-          const planMemo2=document.getElementById('p-memo2')?.value||'';
-          // 개요 내용
-          const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
-          const olLabels=['서론','본론1','본론2','본론3','결론'];
-          const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
-          // KL 단계별 상세
-          const stageSimStr=submitData.stageSim?Object.entries(submitData.stageSim).filter(([k])=>k!=='overall').map(([k,v])=>v&&v.sim!=null?{plan:'계획',outline:'개요',draft:'초고',revise:'고쳐쓰기'}[k]+'='+v.sim+'%('+({T:'Telling',R:'Transformation',C:'Creation'}[v.level]||v.level)+')':'').filter(Boolean).join(', '):'';
-          const payload={
-          // 기본 정보
-          '학생이름':S.name,
-          '주제':S.topic,
-          '제출시각':new Date().toLocaleString('ko-KR'),
-          // 글자 수
-          '계획글자수':S.research.plan.chars,
-          '개요글자수':S.research.outline.chars,
-          '초고글자수':dc,
-          '최종글자수':rc,
-          '글자변화율':chg,
-          // AI 질문 횟수
-          '계획AI질문수':S.research.plan.aiQA.length,
-          '개요AI질문수':S.research.outline.aiQA.length,
-          '초고AI질문수':S.research.draft.aiQA.length,
-          '고쳐쓰기AI질문수':S.research.revise.aiQA.length,
+        const qaByStage=STAGES.reduce((o,s)=>{
+          o[s]=(S.research[s].aiQA||[]).map(x=>'Q:'+x.q+'|A:'+(x.a||'').slice(0,150)).join(';;');
+          return o;
+        },{});
+        const planTopic=document.getElementById('p-topic')?.value||'';
+        const planPurpose=document.getElementById('p-purpose')?.value||'';
+        const planReader=document.getElementById('p-reader')?.value||'';
+        const planIdea=document.getElementById('p-idea')?.value||'';
+        const planRef=document.getElementById('p-ref')?.value||'';
+        const planFormat=document.getElementById('p-format')?.value||'';
+        const planMemo2=document.getElementById('p-memo2')?.value||'';
+        const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+        const olLabels=['서론','본론1','본론2','본론3','결론'];
+        const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
+        const stageSimStr=submitData.stageSim?Object.entries(submitData.stageSim).filter(([k])=>k!=='overall').map(([k,v])=>v&&v.sim!=null?{plan:'계획',outline:'개요',draft:'초고',revise:'고쳐쓰기'}[k]+'='+v.sim+'%('+({T:'Telling',R:'Transformation',C:'Creation'}[v.level]||v.level)+')':'').filter(Boolean).join(', '):'';
+        const payload={
+          '학생이름':S.name,'주제':S.topic,'제출시각':new Date().toLocaleString('ko-KR'),
+          '계획글자수':S.research.plan.chars,'개요글자수':S.research.outline.chars,
+          '초고글자수':dc,'최종글자수':rc,'글자변화율':chg,
+          '계획AI질문수':S.research.plan.aiQA.length,'개요AI질문수':S.research.outline.aiQA.length,
+          '초고AI질문수':S.research.draft.aiQA.length,'고쳐쓰기AI질문수':S.research.revise.aiQA.length,
           '총AI질문수':tq,
-          // AI 질문/답변 단계별
-          '계획AI질문답변':qaByStage.plan.slice(0,800),
-          '개요AI질문답변':qaByStage.outline.slice(0,800),
-          '초고AI질문답변':qaByStage.draft.slice(0,800),
-          '고쳐쓰기AI질문답변':qaByStage.revise.slice(0,800),
-          // 유사도
-          'AI답변최종글유사도':aiSim!=null?aiSim+'%':'미분석',
-          '초고최종글유사도':draftSim!=null?draftSim+'%':'미분석',
-          // KL 분석
-          '지식수준':submitData.kl||'',
-          '지식수준설명':submitData.klDetail||'',
-          'KL단계별상세':stageSimStr,
-          // 자기평가
-          '글질_내용':qs.content||0,
-          '글질_구조':qs.structure||0,
-          '글질_향상':qs.improvement||0,
-          '글질_AI활용':qs.ai_utility||0,
-          '글질_평균':qa,
+          '계획AI질문답변':qaByStage.plan.slice(0,800),'개요AI질문답변':qaByStage.outline.slice(0,800),
+          '초고AI질문답변':qaByStage.draft.slice(0,800),'고쳐쓰기AI질문답변':qaByStage.revise.slice(0,800),
+          'AI답변최종글유사도':aiSim!=null?aiSim+'%':'미분석','초고최종글유사도':draftSim!=null?draftSim+'%':'미분석',
+          '지식수준':submitData.kl||'','지식수준설명':submitData.klDetail||'','KL단계별상세':stageSimStr,
+          '글질_내용':qs.content||0,'글질_구조':qs.structure||0,'글질_향상':qs.improvement||0,'글질_AI활용':qs.ai_utility||0,'글질_평균':qa,
           'AI활용반성':reflection,
-          // 계획하기 내용
-          '계획_주제':planTopic,
-          '계획_목적':planPurpose,
-          '계획_독자':planReader,
-          '계획_핵심주장':planIdea,
-          '계획_AI메모':planRef.slice(0,500),
-          '계획_추가메모':planMemo2.slice(0,300),
-          '계획_형식':planFormat,
-          // 개요/초고/최종 전문
-          '개요내용':outlineText.slice(0,800),
-          '초고내용':draftText,
-          '최종글내용':finalText,
-          // 팀 토의 발화
-          'discTeam':submitData.discTeam||'',
-          'discUttCount':submitData.discUttCount||0,
-          'discUttText':submitData.discUttText||''
+          '계획_주제':planTopic,'계획_목적':planPurpose,'계획_독자':planReader,'계획_핵심주장':planIdea,
+          '계획_AI메모':planRef.slice(0,500),'계획_추가메모':planMemo2.slice(0,300),'계획_형식':planFormat,
+          '개요내용':outlineText.slice(0,800),'초고내용':draftText,'최종글내용':finalText,
+          'discTeam':submitData.discTeam||'','discUttCount':submitData.discUttCount||0,'discUttText':submitData.discUttText||''
         };
 
-        // formsUrl이 없으면 shared storage에서 재시도
         let fUrl=S.formsUrl||localStorage.getItem('wp_forms')||'';
         if(!fUrl){
-          try{
-            const fr=await window.storage.get('formsUrl_'+S.classCode,true);
-            if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;localStorage.setItem('wp_forms',fUrl);}
-          }catch(e){}
+          try{const fr=await window.storage.get('formsUrl_'+S.classCode,true);if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;localStorage.setItem('wp_forms',fUrl);}}catch(e){}
         }
 
         if(!fUrl){
-          toast('✅ 제출 완료! (Sheets URL 미설정 — 교사 패널에서 설정 필요)');
+          toast('✅ 제출 완료! (Sheets URL 미설정)');
         } else {
-          // Apps Script는 CORS 응답이 없을 수 있어서 no-cors 모드 사용
-          await fetch(fUrl,{
-            method:'POST',
-            headers:{'Content-Type':'text/plain'}, // Apps Script no-cors 호환
-            body:JSON.stringify(payload)
-          });
+          await fetch(fUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
           toast('✅ 제출 완료! Google Sheets에 저장됐어요 🎉');
         }
       }catch(e){
         console.error('Sheets 오류:',e);
         toast('✅ 제출됨 (Sheets 전송 실패 — 교사에게 알려주세요)');
       }
+    } else {
+      toast('✅ 제출 완료! (Sheets URL 미설정 — 교사 패널에서 설정 필요)');
     }
     renderSubs();
   });
 }
 
-
-// ═══════════════════════════════════════════════════
 // TF-IDF 코사인 유사도 기반 KL 판정
-// ═══════════════════════════════════════════════════
-
 function tokenizeKo(text){
   const words=text.replace(/[^가-힣a-zA-Z0-9]/g,' ').split(/\s+/).filter(w=>w.length>=2);
   const bigrams=[];
   words.forEach(w=>{for(let i=0;i<w.length-1;i++)bigrams.push(w[i]+w[i+1])});
   return [...words,...bigrams];
 }
-
 function cosineSim(text1,text2){
   if(!text1||!text2)return 0;
   const t1=tokenizeKo(text1),t2=tokenizeKo(text2);
@@ -1105,103 +1252,56 @@ function cosineSim(text1,text2){
   t2.forEach(t=>v2[t]=(v2[t]||0)+1);
   const all=new Set([...t1,...t2]);
   let dot=0,n1=0,n2=0;
-  all.forEach(k=>{
-    dot+=(v1[k]||0)*(v2[k]||0);
-    n1+=(v1[k]||0)**2;
-    n2+=(v2[k]||0)**2;
-  });
+  all.forEach(k=>{dot+=(v1[k]||0)*(v2[k]||0);n1+=(v1[k]||0)**2;n2+=(v2[k]||0)**2;});
   return n1&&n2?dot/Math.sqrt(n1*n2):0;
 }
-
 function splitSents(text){
   return text.replace(/([.!?])\s+/g,'$1\n').replace(/(다[.!?])/g,'$1\n').split('\n').map(s=>s.trim()).filter(s=>s.length>10);
 }
-
-// 누적 AI 산출물 계산 (해당 단계까지 누적)
 function getCumulativeAI(upToStage){
   const order=['plan','outline','draft','revise'];
   const idx=order.indexOf(upToStage);
   if(idx<0)return'';
-  return order.slice(0,idx+1)
-    .flatMap(s=>S.research[s].aiQA||[])
-    .map(qa=>qa.a||'')
-    .join(' ');
+  return order.slice(0,idx+1).flatMap(s=>S.research[s].aiQA||[]).map(qa=>qa.a||'').join(' ');
 }
-
-// 단계별 학생 작성물 가져오기
 function getStageStudentText(stage){
-  if(stage==='plan'){
-    return document.getElementById('p-ref')?.value||'';
-  }
-  if(stage==='outline'){
-    const tas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
-    return tas.map(ta=>ta.value.trim()).filter(Boolean).join(' ');
-  }
-  if(stage==='draft'){
-    return document.getElementById('draft-ta')?.value||'';
-  }
-  if(stage==='revise'){
-    return document.getElementById('revise-ta')?.value||'';
-  }
+  if(stage==='plan'){return document.getElementById('p-ref')?.value||'';}
+  if(stage==='outline'){const tas=[...document.querySelectorAll('#ol-wrap .ol-ta')];return tas.map(ta=>ta.value.trim()).filter(Boolean).join(' ');}
+  if(stage==='draft'){return document.getElementById('draft-ta')?.value||'';}
+  if(stage==='revise'){return document.getElementById('revise-ta')?.value||'';}
   return'';
 }
-
-// 단계별 유사도 분석
-// AI 산출물: 해당 단계까지 누적
-// 학생 작성물: 해당 단계만
 function calcStageSimilarity(){
   const stages=['plan','outline','draft','revise'];
   const labels={plan:'계획하기',outline:'개요쓰기',draft:'초고쓰기',revise:'고쳐쓰기'};
   const results={};
-
   stages.forEach(stage=>{
     const cumulativeAI=getCumulativeAI(stage);
     const studentText=getStageStudentText(stage);
     const aiQCount=S.research[stage].aiQA?.length||0;
-
-    if(!cumulativeAI||!studentText||aiQCount===0){
-      results[stage]={sim:null,level:null,aiQCount,label:labels[stage]};
-      return;
-    }
-
+    if(!cumulativeAI||!studentText||aiQCount===0){results[stage]={sim:null,level:null,aiQCount,label:labels[stage]};return;}
     const sim=Math.round(cosineSim(cumulativeAI,studentText)*100);
-    // 임계값: 0.5이상=Telling, 0.2~0.5=Transformation, 0.2미만=Creation
     const level=sim>=50?'T':sim>=20?'R':'C';
     results[stage]={sim,level,aiQCount,label:labels[stage]};
   });
-
-  // 전체 평균 (AI 질문이 있는 단계만)
   const vals=Object.values(results).filter(r=>r.sim!==null).map(r=>r.sim);
   results.overall=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
-
   return results;
 }
-
-// 최종 KL 판정: 단계별 유사도 기반
 function judgeKLFromStageSim(stageSim){
   const vals=Object.values(stageSim).filter(r=>r&&r.sim!==null);
   if(!vals.length)return{tell:33,trans:34,create:33,dominant:'Transformation'};
-
   let tCount=0,rCount=0,cCount=0;
-  vals.forEach(r=>{
-    if(r.level==='T')tCount++;
-    else if(r.level==='R')rCount++;
-    else cCount++;
-  });
-
+  vals.forEach(r=>{if(r.level==='T')tCount++;else if(r.level==='R')rCount++;else cCount++;});
   const total=vals.length;
   const tell=Math.round(tCount/total*100);
   const trans=Math.round(rCount/total*100);
   const create=100-tell-trans;
   const dominant=tell>=trans&&tell>=create?'Telling':trans>=tell&&trans>=create?'Transformation':'Creation';
-
-  // 단계별 유사도 설명
   const details=vals.map(r=>`${r.label}: AI누적↔학생=${r.sim}%(${r.level==='T'?'Telling':r.level==='R'?'Transformation':'Creation'})`).join(', ');
   const comment=`단계별 분석 — ${details}. 전체 평균 유사도: ${stageSim.overall}%`;
-
   return{tell,trans,create,dominant,comment};
 }
-
 async function calcSimilarity(draft,final){
   if(!draft||!final)return null;
   const draftVsFinal=Math.round(cosineSim(draft,final)*100);
@@ -1211,15 +1311,9 @@ async function calcSimilarity(draft,final){
   const aiVsFinal=Math.round(cosineSim(aiContent,final)*100);
   return{aiVsFinal,draftVsFinal,stageSim};
 }
-
 async function calcKL(draft,final,allQA,reflection){
-  // 단계별 유사도 계산 (누적 AI vs 해당 단계 학생)
   const stageSim=calcStageSimilarity();
-
-  // 단계별 유사도로 KL 판정
   const klResult=judgeKLFromStageSim(stageSim);
-
-  // 고쳐쓰기 단계 문장별 세부 분석 (추가 정보)
   const reviseAI=getCumulativeAI('revise');
   const sentences=splitSents(final);
   const sentenceDetails=sentences.slice(0,15).map(sentence=>{
@@ -1228,26 +1322,16 @@ async function calcKL(draft,final,allQA,reflection){
     const level=simPct>=50?'T':simPct>=20?'R':'C';
     return{sentence,sim:simPct,level};
   });
-
   const tSents=sentenceDetails.filter(s=>s.level==='T').length;
   const rSents=sentenceDetails.filter(s=>s.level==='R').length;
   const cSents=sentenceDetails.filter(s=>s.level==='C').length;
-
-  const fullComment=klResult.comment
-    +(sentenceDetails.length?` | 최종글 문장분석(${sentenceDetails.length}문장): T=${tSents} R=${rSents} C=${cSents}`:'');
-
-  return{
-    tell:klResult.tell,
-    trans:klResult.trans,
-    create:klResult.create,
-    dominant:klResult.dominant,
-    comment:fullComment,
-    stageSim,
-    sentenceDetails
-  };
+  const fullComment=klResult.comment+(sentenceDetails.length?` | 최종글 문장분석(${sentenceDetails.length}문장): T=${tSents} R=${rSents} C=${cSents}`:'');
+  return{tell:klResult.tell,trans:klResult.trans,create:klResult.create,dominant:klResult.dominant,comment:fullComment,stageSim,sentenceDetails};
 }
 
-
+// ═══════════════════════════════════════════════════
+// updateSub: localStorage wp_subs에 학생 데이터 저장
+// ═══════════════════════════════════════════════════
 function updateSub(data){
   const subs=JSON.parse(localStorage.getItem('wp_subs')||'[]');
   const i=subs.findIndex(s=>s.name===S.name);
@@ -1265,17 +1349,14 @@ function renderAI(){
   }
   const topic=(document.getElementById('p-topic')||{}).value||S.topic||'';
   const ex=topic?topic+'에 대해 찬반 논점 알려줘':'원자력 폐지 찬성 나라 알려줘';
-
-  // Build HTML safely
   const qbtnsHtml=QUICK[S.stage].map(function(q){
     return '<button class="qbtn" onclick="sendQBtn(this)">'+esc(q)+'</button>';
   }).join('');
-
   body.innerHTML=
     '<div class="ai-ok">✅ Claude AI — 자료조사·피드백 모두 가능</div>'+
     '<div class="mtabs">'+
-      '<button class="mtab on" id="mt-chat" onclick="switchMode("chat")">💬 AI 대화</button>'+
-      '<button class="mtab" id="mt-guide" onclick="switchMode("guide")">📖 가이드</button>'+
+      '<button class="mtab on" id="mt-chat" onclick="switchMode(\'chat\')">💬 AI 대화</button>'+
+      '<button class="mtab" id="mt-guide" onclick="switchMode(\'guide\')">📖 가이드</button>'+
     '</div>'+
     '<div id="mp-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">'+
       '<div class="ai-msgs" id="ai-msgs">'+
@@ -1301,8 +1382,6 @@ function renderAI(){
       '• "내 글 논리적 오류 찾아줘"<br>'+
       '• "이 문단 더 자연스럽게 고쳐줘"'+
     '</div>';
-
-  // Add enter key handler after render
   const ta=document.getElementById('ai-ta');
   if(ta)ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI()}});
 }
@@ -1320,24 +1399,11 @@ function sendQBtn(btn){
   if(ta){ta.value=map[q]||q;sendAI();}
 }
 
-
 function switchMode(m){
   document.getElementById('mt-chat').classList.toggle('on',m==='chat');
   document.getElementById('mt-guide').classList.toggle('on',m==='guide');
   document.getElementById('mp-chat').style.display=m==='chat'?'flex':'none';
   document.getElementById('mp-guide').style.display=m==='guide'?'block':'none';
-}
-
-function sendQ(q){
-  const topic=document.getElementById('p-topic')?.value||S.topic||'이 주제';
-  const map={
-    '이 주제 자료조사 해줘':'"'+topic+'"에 대해 자료조사 해줘. 찬반 논점, 주요 사례, 관련 통계, 배경지식을 알려줘.',
-    '찬반 논점 정리해줘':'"'+topic+'"의 찬성 측과 반대 측 논점을 각각 3가지씩 구체적으로 정리해줘.',
-    '관련 사례·통계 알려줘':'"'+topic+'"와 관련된 구체적인 국가 사례, 통계, 최근 동향을 알려줘.',
-    '배경지식 설명해줘':'"'+topic+'"에 대한 배경지식과 역사적 맥락을 쉽게 설명해줘.'
-  };
-  document.getElementById('ai-ta').value=map[q]||q;
-  sendAI();
 }
 
 async function sendAI(){
@@ -1365,6 +1431,7 @@ async function sendAI(){
   if(!S.research[S.stage].aiQA)S.research[S.stage].aiQA=[];
   S.research[S.stage].aiQA.push({q:text,a:aiAnswer.slice(0,200)});
   updateSub({research:S.research});
+  autoSave();
 
   document.getElementById(tid)?.remove();
   msgs.insertAdjacentHTML('beforeend','<div class="msg a"><div class="lbl">Claude AI</div>'+esc(reply).split('\n').join('<br>')+'</div>');
@@ -1377,49 +1444,39 @@ function toggleAI(){
   const col=document.getElementById('ai-col');
   const body=document.getElementById('ai-body');
   const btn=document.getElementById('ai-tog-btn');
-  if(col) col.classList.toggle('closed',!S.aiOpen);
+  if(col)col.classList.toggle('closed',!S.aiOpen);
   if(body){
-    if(S.aiOpen){
-      // flex 속성 명시 (모바일에서 CSS만으로 안 될 때 대비)
-      body.style.display='flex';
-      body.style.flexDirection='column';
-      body.style.flex='1';
-      body.style.minHeight='0';
-      body.style.overflow='hidden';
-    } else {
-      body.style.display='none';
-    }
+    if(S.aiOpen){body.style.display='flex';body.style.flexDirection='column';body.style.flex='1';body.style.minHeight='0';body.style.overflow='hidden';}
+    else{body.style.display='none';}
   }
-  // 모바일에서는 ▼/▲, PC에서는 ◀/▶
   const isMobile=window.innerWidth<=660;
-  if(btn) btn.textContent=S.aiOpen?(isMobile?'▼':'◀'):(isMobile?'▲':'▶');
+  if(btn)btn.textContent=S.aiOpen?(isMobile?'▼':'◀'):(isMobile?'▲':'▶');
 }
 
 function openModal(t,b,cb){document.getElementById('mo-title').textContent=t;document.getElementById('mo-body').textContent=b;document.getElementById('mo-ok').onclick=cb;document.getElementById('ov').classList.add('show')}
 function closeModal(){document.getElementById('ov').classList.remove('show')}
 let _tt;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3000)}
-function esc(s){return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 // INIT
 STAGES.forEach(s=>{const el=document.getElementById('st-'+s);if(el)el.style.display='none'});
 document.getElementById('st-plan').style.display='flex';
 loadSettings();
-// 모바일에서 AI 패널 초기 닫힘
 if(window.innerWidth<=660){
   S.aiOpen=false;
   const col=document.getElementById('ai-col');
   const body=document.getElementById('ai-body');
-  if(col) col.classList.add('closed');
-  if(body) body.style.display='none';
+  if(col)col.classList.add('closed');
+  if(body)body.style.display='none';
   const btn=document.getElementById('ai-tog-btn');
-  if(btn) btn.textContent='▲';
+  if(btn)btn.textContent='▲';
 }
 
 </script>
 <script>
 // ═══════════════════════════════════════════════
-// v6 팀 토의 분석 모듈 (완전 새 작성)
+// v6 팀 토의 분석 모듈
 // ═══════════════════════════════════════════════
 
 const KB_CODES = {
@@ -1447,7 +1504,6 @@ const DS = {
   kodingResult: [],
 };
 
-// ─── 패널 HTML 생성 ───
 function createDiscussionPanel() {
   const html = `
 <div id="disc-panel" style="width:380px;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--sf);flex-shrink:0">
@@ -1458,17 +1514,12 @@ function createDiscussionPanel() {
     </div>
     <button onclick="toggleDiscPanel()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;line-height:1">◀</button>
   </div>
-
   <div style="display:flex;border-bottom:1px solid var(--bd);flex-shrink:0">
     <button class="disc-tab-btn on" id="dtab-record" onclick="switchDiscTab('record')" style="flex:1;padding:8px 4px;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--red);color:var(--red)">🎙️ 녹음·전사</button>
     <button class="disc-tab-btn" id="dtab-code" onclick="switchDiscTab('code')" style="flex:1;padding:8px 4px;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--ink3)">🔬 KB 코딩</button>
     <button class="disc-tab-btn" id="dtab-result" onclick="switchDiscTab('result')" style="flex:1;padding:8px 4px;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--ink3)">📊 결과</button>
   </div>
-
-  <!-- 탭1: 녹음·전사 -->
   <div id="dp-record" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px">
-
-    <!-- 팀 설정 -->
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">👥 팀 설정</div>
       <input id="disc-team-name" placeholder="팀 이름" style="width:100%;padding:7px 10px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;margin-bottom:6px;outline:none">
@@ -1479,11 +1530,6 @@ function createDiscussionPanel() {
       </div>
       <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:4px"></div>
     </div>
-
-    <!-- 기기별 안내 배너 (JS로 제어) -->
-    <div id="device-guide" style="border-radius:var(--rs);padding:10px 12px;font-size:12px;line-height:1.7;display:none"></div>
-
-    <!-- PC용: 녹음 제어 -->
     <div id="pc-rec-section" style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">① 🎙️ 녹음</div>
       <button id="rec-btn" onclick="toggleRecording()" style="width:100%;padding:11px;background:var(--grn);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">▶ 녹음 시작</button>
@@ -1492,15 +1538,10 @@ function createDiscussionPanel() {
         <div id="live-transcript" style="color:var(--ink2)">녹음 시작 버튼을 누르세요</div>
       </div>
     </div>
-
-    <!-- 모바일용: 직접 입력 (JS로 표시) -->
     <div id="mobile-input-section" style="background:var(--pur-lt);border:1.5px solid #ddd6fe;border-radius:var(--rs);padding:12px;display:none">
       <div style="font-size:12px;font-weight:700;color:var(--pur);margin-bottom:6px">✏️ 직접 입력</div>
-      <div style="font-size:11px;color:var(--pur);margin-bottom:8px;line-height:1.6">말한 내용을 직접 입력하세요<br>발화자 선택 후 저장하면 기록됩니다</div>
       <textarea id="mobile-direct-input" placeholder="여기에 발화 내용을 입력하세요…" style="width:100%;padding:10px;border:1.5px solid #ddd6fe;border-radius:var(--rs);font-family:inherit;font-size:13px;color:var(--ink);resize:none;outline:none;min-height:80px;line-height:1.7;background:#fff" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveMobileInput()}"></textarea>
     </div>
-
-    <!-- 2단계: 발화자 선택 + 저장 -->
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">② 🎤 발화자 선택 후 저장</div>
       <div style="font-size:11px;color:var(--ink3);margin-bottom:8px" id="speaker-guide">발화 후 방금 말한 사람을 선택하세요</div>
@@ -1509,8 +1550,6 @@ function createDiscussionPanel() {
       </div>
       <button onclick="saveUtteranceSmart()" style="width:100%;padding:9px;background:var(--ink);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 발화 저장</button>
     </div>
-
-    <!-- 발화 목록 -->
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:12px;font-weight:700">📝 발화 목록 (<span id="utt-count">0</span>개)</div>
@@ -1521,8 +1560,6 @@ function createDiscussionPanel() {
       </div>
     </div>
   </div>
-
-  <!-- 탭2: KB 코딩 -->
   <div id="dp-code" style="display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:10px">
     <div style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 KB 자동 코딩</div>
@@ -1535,8 +1572,6 @@ function createDiscussionPanel() {
       <div id="coding-items" style="display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto"></div>
     </div>
   </div>
-
-  <!-- 탭3: 결과 -->
   <div id="dp-result" style="display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:10px">
     <div id="result-summary" style="background:var(--bg);border-radius:var(--rs);padding:12px">
       <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 담화 분석 요약</div>
@@ -1548,7 +1583,6 @@ function createDiscussionPanel() {
   return html;
 }
 
-// ─── 패널 토글 ───
 function toggleDiscPanel() {
   let panel = document.getElementById('disc-panel');
   const slot = document.getElementById('disc-panel-slot');
@@ -1559,14 +1593,12 @@ function toggleDiscPanel() {
     renderUtteranceList();
     const cnt = document.getElementById('utt-count');
     if (cnt) cnt.textContent = DS.utterances.length;
-    // 기기 감지 후 UI 초기화
     setTimeout(_initDiscUI, 50);
   }
   const hidden = !panel.style.width || panel.style.width === '0px' || panel.style.display === 'none';
   if (hidden) {
     panel.style.display = 'flex';
     panel.style.flexDirection = 'column';
-    // 모바일: 전체화면 오버레이
     if (window.innerWidth <= 660) {
       panel.style.position = 'fixed';
       panel.style.top = '0';
@@ -1581,20 +1613,23 @@ function toggleDiscPanel() {
   }
 }
 
+function _initDiscUI() {
+  const isIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+  const isMobile = /Android|Mobile/i.test(navigator.userAgent) || isIOS;
+  const mobileSection = document.getElementById('mobile-input-section');
+  if (isMobile && mobileSection) mobileSection.style.display = 'block';
+}
+
 function switchDiscTab(tab) {
   ['record','code','result'].forEach(t => {
     const btn = document.getElementById('dtab-'+t);
     const pnl = document.getElementById('dp-'+t);
     const on = t === tab;
-    if (btn) {
-      btn.style.borderBottomColor = on ? 'var(--red)' : 'transparent';
-      btn.style.color = on ? 'var(--red)' : 'var(--ink3)';
-    }
+    if (btn) { btn.style.borderBottomColor = on ? 'var(--red)' : 'transparent'; btn.style.color = on ? 'var(--red)' : 'var(--ink3)'; }
     if (pnl) pnl.style.display = on ? 'flex' : 'none';
   });
 }
 
-// ─── 팀원 관리 ───
 function addMember() {
   const input = document.getElementById('disc-member-input');
   const name = input.value.trim();
@@ -1604,13 +1639,11 @@ function addMember() {
   renderMemberTags();
   renderSpeakerBtns();
 }
-
 function removeMember(name) {
   DS.members = DS.members.filter(m => m !== name);
   renderMemberTags();
   renderSpeakerBtns();
 }
-
 function renderMemberTags() {
   const el = document.getElementById('member-tags');
   if (!el) return;
@@ -1619,19 +1652,14 @@ function renderMemberTags() {
     + m + '<button onclick="removeMember(\'' + m + '\')" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;padding:0;line-height:1">×</button></span>'
   ).join('');
 }
-
 function renderSpeakerBtns() {
   const el = document.getElementById('speaker-btns');
   if (!el) return;
-  if (!DS.members.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--ink3)">팀원을 먼저 추가하세요</div>';
-    return;
-  }
+  if (!DS.members.length) { el.innerHTML = '<div style="font-size:11px;color:var(--ink3)">팀원을 먼저 추가하세요</div>'; return; }
   el.innerHTML = DS.members.map(m =>
     '<button onclick="selectSpeaker(\'' + m + '\')" id="sp-' + m + '" style="padding:6px 14px;border:1.5px solid var(--bd);border-radius:var(--rs);font-family:inherit;font-size:12px;cursor:pointer;background:var(--sf);color:var(--ink);transition:all .15s">' + m + '</button>'
   ).join('');
 }
-
 function selectSpeaker(name) {
   DS.currentSpeaker = name;
   document.querySelectorAll('[id^="sp-"]').forEach(btn => {
@@ -1642,233 +1670,119 @@ function selectSpeaker(name) {
   });
 }
 
-// ─── 녹음 ───
 function toggleRecording() {
   if (DS.isRecording) stopRecording();
   else startRecording();
 }
-
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    const isIOS=/iP(ad|hone|od)/.test(navigator.userAgent);
-    toast(isIOS ? '아이폰/아이패드는 음성 인식 미지원. 아래 직접 입력창을 사용하세요.' : '이 브라우저는 음성 인식 미지원. Chrome을 사용해주세요.');
+    toast('이 브라우저는 음성 인식 미지원. Chrome을 사용하거나 직접 입력창을 사용하세요.');
     return;
   }
   if(DS.isRecording) return;
-
   const isMobile=/Android|Mobile/i.test(navigator.userAgent)&&!/iPad/.test(navigator.userAgent);
-  // 갤럭시 패드 등 태블릿도 포함
   const isTablet=/Android/i.test(navigator.userAgent)&&!/Mobile/i.test(navigator.userAgent);
   const useMobileMode=isMobile||isTablet;
-
-  DS._seen=new Set();
-  DS._recActive=true;
-  DS._useMobile=useMobileMode;
-
-  if(useMobileMode){
-    // 모바일/태블릿: continuous=false + 중복 방지
-    _recLoopMobile();
-  } else {
-    // PC/노트북: continuous=true 자연스러운 녹음
-    _recStartPC();
-  }
+  DS._seen=new Set();DS._recActive=true;DS._useMobile=useMobileMode;
+  if(useMobileMode) _recLoopMobile();
+  else _recStartPC();
 }
-
 function _recStartPC(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const rec=new SR();
-  rec.lang='ko-KR';
-  rec.continuous=true;   // PC: 멈춤 없이 연속 인식
-  rec.interimResults=true;
+  rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;
   DS.recognition=rec;
-
   rec.onresult=e=>{
     let interim='',newFinal='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const txt=e.results[i][0].transcript;
-      if(e.results[i].isFinal) newFinal+=txt;
-      else interim+=txt;
+      if(e.results[i].isFinal)newFinal+=txt;else interim+=txt;
     }
-    if(newFinal) DS.speakerBuffer+=newFinal;
+    if(newFinal)DS.speakerBuffer+=newFinal;
     const el=document.getElementById('live-transcript');
-    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
+    if(el)el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
   };
-
-  rec.onerror=e=>{
-    if(e.error==='not-allowed'||e.error==='permission-denied'){
-      toast('마이크 권한을 허용해주세요');
-      stopRecording();
-    }
-  };
-
-  rec.onend=()=>{
-    if(DS._recActive&&!DS._useMobile){
-      try{rec.start();}catch(e){setTimeout(_recStartPC,300);}
-    }
-  };
-
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='permission-denied'){toast('마이크 권한을 허용해주세요');stopRecording();}};
+  rec.onend=()=>{if(DS._recActive&&!DS._useMobile){try{rec.start();}catch(e){setTimeout(_recStartPC,300);}}};
   try{
-    rec.start();
-    DS.isRecording=true;
-    const btn=document.getElementById('rec-btn');
-    const dot=document.getElementById('rec-dot');
+    rec.start();DS.isRecording=true;
+    const btn=document.getElementById('rec-btn');const dot=document.getElementById('rec-dot');
     if(btn){btn.textContent='⏹ 녹음 종료';btn.style.background='var(--red)';}
     if(dot){dot.style.background='#ef4444';dot.style.animation='blink 1s infinite';}
     toast('녹음 중 — 자유롭게 말씀하세요');
-  }catch(err){
-    DS.isRecording=false;DS._recActive=false;
-    toast('녹음 시작 실패: '+err.message);
-  }
+  }catch(err){DS.isRecording=false;DS._recActive=false;toast('녹음 시작 실패: '+err.message);}
 }
-
 function _recLoopMobile(){
-  if(!DS._recActive) return;
+  if(!DS._recActive)return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   const rec=new SR();
-  rec.lang='ko-KR';
-  rec.continuous=false;  // 모바일: 중복 방지
-  rec.interimResults=true;
+  rec.lang='ko-KR';rec.continuous=false;rec.interimResults=true;
   DS.recognition=rec;
-
   rec.onresult=e=>{
     let interim='',newFinal='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const txt=e.results[i][0].transcript;
-      if(e.results[i].isFinal){
-        // 공백제거 원문을 키로 사용 (정렬 방식은 다른 문장도 차단하는 버그 있음)
-        const key=txt.trim().replace(/\s+/g,'');
-        if(key&&!DS._seen.has(key)){DS._seen.add(key);newFinal+=txt;}
-      } else {interim+=txt;}
+      if(e.results[i].isFinal){const key=txt.trim().replace(/\s+/g,'');if(key&&!DS._seen.has(key)){DS._seen.add(key);newFinal+=txt;}}
+      else{interim+=txt;}
     }
-    if(newFinal) DS.speakerBuffer+=newFinal;
+    if(newFinal)DS.speakerBuffer+=newFinal;
     const el=document.getElementById('live-transcript');
-    if(el) el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
+    if(el)el.textContent=DS.speakerBuffer+(interim?' '+interim+'...':'');
   };
-
-  rec.onerror=e=>{
-    if(e.error==='not-allowed'||e.error==='permission-denied'){
-      toast('마이크 권한을 허용해주세요');
-      stopRecording();
-    }
-  };
-
-  rec.onend=()=>{if(DS._recActive) setTimeout(_recLoopMobile,100);};
-
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='permission-denied'){toast('마이크 권한을 허용해주세요');stopRecording();}};
+  rec.onend=()=>{if(DS._recActive)setTimeout(_recLoopMobile,100);};
   try{
-    rec.start();
-    DS.isRecording=true;
-    const btn=document.getElementById('rec-btn');
-    const dot=document.getElementById('rec-dot');
+    rec.start();DS.isRecording=true;
+    const btn=document.getElementById('rec-btn');const dot=document.getElementById('rec-dot');
     if(btn){btn.textContent='⏹ 녹음 종료';btn.style.background='var(--red)';}
     if(dot){dot.style.background='#ef4444';dot.style.animation='blink 1s infinite';}
-  }catch(err){
-    DS.isRecording=false;DS._recActive=false;
-  }
+  }catch(err){DS.isRecording=false;DS._recActive=false;}
 }
-
-
 function stopRecording() {
-  DS._recActive=false;
-  DS.isRecording=false;
-  DS._mobileWarned=false; // 다음 녹음 시 경고 초기화
+  DS._recActive=false;DS.isRecording=false;
   try{if(DS.recognition){DS.recognition.abort();DS.recognition=null;}}catch(e){}
-  const btn=document.getElementById('rec-btn');
-  const dot=document.getElementById('rec-dot');
+  const btn=document.getElementById('rec-btn');const dot=document.getElementById('rec-dot');
   if(btn){btn.textContent='▶ 녹음 시작';btn.style.background='var(--grn)';}
   if(dot){dot.style.background='#94a3b8';dot.style.animation='none';}
   toast('⏹ 녹음 종료 — 발화자를 선택하고 저장하세요');
 }
-
-
 function saveMobileInput() {
   const ta = document.getElementById('mobile-direct-input');
-  if (ta && ta.value.trim()) {
-    DS.speakerBuffer = ta.value.trim();
-    ta.value = '';
-    saveUtteranceSmart();
-  }
+  if (ta && ta.value.trim()) { DS.speakerBuffer = ta.value.trim(); ta.value = ''; saveUtteranceSmart(); }
 }
-
 function saveUtteranceSmart() {
-  // 모바일 직접입력 우선, 없으면 녹음 버퍼
   const mobileInput = document.getElementById('mobile-direct-input');
-  if (mobileInput && mobileInput.value.trim()) {
-    DS.speakerBuffer = mobileInput.value.trim();
-    mobileInput.value = '';
-  }
+  if (mobileInput && mobileInput.value.trim()) { DS.speakerBuffer = mobileInput.value.trim(); mobileInput.value = ''; }
   saveUtterance();
 }
-
 function saveUtterance() {
-  // speakerBuffer 우선, 없으면 live-transcript 텍스트에서 가져오기
   let text = DS.speakerBuffer.trim();
-  if (!text) {
-    const liveEl = document.getElementById('live-transcript');
-    if (liveEl) {
-      const lt = liveEl.textContent
-        .replace('녹음 시작 버튼을 누르세요','')
-        .replace('저장됐습니다. 다음 녹음을 시작하세요','')
-        .replace(/\.\.\.$/,'').trim();
-      if (lt) text = lt;
-    }
-  }
-  // 모바일 직접입력창에서도 가져오기
-  if (!text) {
-    const mInp = document.getElementById('mobile-direct-input');
-    if (mInp && mInp.value.trim()) text = mInp.value.trim();
-  }
-  if (!text) { toast('저장할 발화가 없습니다. 먼저 녹음하거나 입력하세요.'); return; }
+  if (!text) { const liveEl = document.getElementById('live-transcript'); if (liveEl) { const lt = liveEl.textContent.replace('녹음 시작 버튼을 누르세요','').replace('저장됐습니다. 다음 녹음을 시작하세요','').replace(/\.\.\.$/,'').trim(); if (lt) text = lt; } }
+  if (!text) { const mInp = document.getElementById('mobile-direct-input'); if (mInp && mInp.value.trim()) text = mInp.value.trim(); }
+  if (!text) { toast('저장할 발화가 없습니다.'); return; }
   if (!DS.currentSpeaker) { toast('발화자를 먼저 선택하세요'); return; }
-  DS.utterances.push({
-    id: Date.now(),
-    speaker: DS.currentSpeaker,
-    text,
-    time: new Date().toLocaleTimeString('ko-KR'),
-    code: null,
-    reason: null,
-  });
-  DS.speakerBuffer = '';
-  DS.currentSpeaker = '';
-  DS._seen = new Set(); // 다음 발화를 위해 중복방지 초기화
-  // 발화자 버튼 초기화
-  document.querySelectorAll('[id^="sp-"]').forEach(btn => {
-    btn.style.background = 'var(--sf)';
-    btn.style.color = 'var(--ink)';
-    btn.style.borderColor = 'var(--bd)';
-  });
-  const el = document.getElementById('live-transcript');
-  if (el) el.textContent = '저장됐습니다. 다음 녹음을 시작하세요';
-  const mInp = document.getElementById('mobile-direct-input');
-  if (mInp) mInp.value = '';
+  DS.utterances.push({ id: Date.now(), speaker: DS.currentSpeaker, text, time: new Date().toLocaleTimeString('ko-KR'), code: null, reason: null });
+  DS.speakerBuffer = ''; DS.currentSpeaker = ''; DS._seen = new Set();
+  document.querySelectorAll('[id^="sp-"]').forEach(btn => { btn.style.background='var(--sf)'; btn.style.color='var(--ink)'; btn.style.borderColor='var(--bd)'; });
+  const el = document.getElementById('live-transcript'); if (el) el.textContent = '저장됐습니다. 다음 녹음을 시작하세요';
+  const mInp = document.getElementById('mobile-direct-input'); if (mInp) mInp.value = '';
   renderUtteranceList();
-  const cnt = document.getElementById('utt-count');
-  if (cnt) cnt.textContent = DS.utterances.length;
+  const cnt = document.getElementById('utt-count'); if (cnt) cnt.textContent = DS.utterances.length;
   toast('✅ 발화 저장됨 (' + DS.utterances.length + '개)');
 }
-
 function clearUtterances() {
   if (!confirm('발화 목록을 초기화하시겠습니까?')) return;
-  DS.utterances = [];
-  DS.kodingResult = [];
+  DS.utterances = []; DS.kodingResult = [];
   renderUtteranceList();
-  const cnt = document.getElementById('utt-count');
-  if (cnt) cnt.textContent = 0;
+  const cnt = document.getElementById('utt-count'); if (cnt) cnt.textContent = 0;
 }
-
 function deleteUtterance(idx) {
-  DS.utterances.splice(idx, 1);
-  renderUtteranceList();
-  const cnt = document.getElementById('utt-count');
-  if (cnt) cnt.textContent = DS.utterances.length;
+  DS.utterances.splice(idx, 1); renderUtteranceList();
+  const cnt = document.getElementById('utt-count'); if (cnt) cnt.textContent = DS.utterances.length;
 }
-
 function renderUtteranceList() {
-  const el = document.getElementById('utt-list');
-  if (!el) return;
-  if (!DS.utterances.length) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--ink3);text-align:center;padding:16px">아직 발화가 없습니다</div>';
-    return;
-  }
+  const el = document.getElementById('utt-list'); if (!el) return;
+  if (!DS.utterances.length) { el.innerHTML = '<div style="font-size:11px;color:var(--ink3);text-align:center;padding:16px">아직 발화가 없습니다</div>'; return; }
   el.innerHTML = DS.utterances.map((u, i) => {
     const info = u.code ? KB_CODES[u.code] : null;
     return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 10px">'
@@ -1879,22 +1793,16 @@ function renderUtteranceList() {
       + '<span style="font-size:10px;color:var(--ink3)">' + u.time + '</span>'
       + '<button onclick="deleteUtterance(' + i + ')" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:12px;padding:0">×</button>'
       + '</div></div>'
-      + '<div style="font-size:12px;color:var(--ink2);line-height:1.6">' + esc(u.text) + '</div>'
-      + '</div>';
+      + '<div style="font-size:12px;color:var(--ink2);line-height:1.6">' + esc(u.text) + '</div></div>';
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-// ─── KB 자동 코딩 ───
 async function runKBCoding() {
   if (!DS.utterances.length) { toast('발화가 없습니다'); return; }
-  const btn = document.getElementById('coding-btn');
-  const prog = document.getElementById('coding-progress');
-  btn.disabled = true; btn.textContent = '분석 중…';
-  prog.style.display = 'block';
-
+  const btn = document.getElementById('coding-btn'); const prog = document.getElementById('coding-progress');
+  btn.disabled = true; btn.textContent = '분석 중…'; prog.style.display = 'block';
   const aiAnswers = STAGES.flatMap(s => S.research[s].aiQA || []).map(qa => qa.a || '').join(' ');
-
   const prompt = `당신은 이지영(2025) 협력적 글쓰기 상호작용 유형 분석틀 전문가입니다.
 
 ━━━ 핵심 원칙 ━━━
@@ -1923,7 +1831,6 @@ ${DS.utterances.map((u, i) => '[' + i + '] ' + u.speaker + ': ' + u.text).join('
 JSON 배열만 응답:
 [{"idx":0,"code":"코드","reason":"20자 이내 판정 근거","aiRelated":true또는false},...]
 주의: 하나의 발화 turn = 하나의 JSON 객체`;
-
   try {
     const key = S.apiKey || localStorage.getItem('wp_key') || '';
     if (!key) throw new Error('API_KEY_MISSING');
@@ -1935,48 +1842,30 @@ JSON 배열만 응답:
     const d = await res.json();
     const raw = d.content.map(c => c.text || '').join('');
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    parsed.forEach(item => {
-      if (DS.utterances[item.idx]) {
-        DS.utterances[item.idx].code = item.code;
-        DS.utterances[item.idx].reason = item.reason;
-        DS.utterances[item.idx].aiRelated = item.aiRelated;
-      }
-    });
+    parsed.forEach(item => { if (DS.utterances[item.idx]) { DS.utterances[item.idx].code = item.code; DS.utterances[item.idx].reason = item.reason; DS.utterances[item.idx].aiRelated = item.aiRelated; } });
     DS.kodingResult = parsed;
-    renderUtteranceList();
-    renderCodingResult();
-    renderResultSummary();
-    switchDiscTab('result');
-    toast('✅ KB 코딩 완료!');
+    renderUtteranceList(); renderCodingResult(); renderResultSummary();
+    switchDiscTab('result'); toast('✅ KB 코딩 완료!');
   } catch(e) { toast('코딩 오류: ' + e.message); }
-  btn.disabled = false; btn.textContent = '🔬 자동 코딩 실행';
-  prog.style.display = 'none';
+  btn.disabled = false; btn.textContent = '🔬 자동 코딩 실행'; prog.style.display = 'none';
 }
-
 function renderCodingResult() {
-  const el = document.getElementById('coding-result-preview');
-  const items = document.getElementById('coding-items');
+  const el = document.getElementById('coding-result-preview'); const items = document.getElementById('coding-items');
   if (!el || !items) return;
   el.style.display = 'block';
   items.innerHTML = DS.utterances.map(u => {
     const info = u.code ? KB_CODES[u.code] : null;
     return '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 10px">'
-      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-      + '<span style="font-size:11px;font-weight:700">' + esc(u.speaker) + '</span>'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:11px;font-weight:700">' + esc(u.speaker) + '</span>'
       + (info ? '<span style="font-size:10px;font-weight:700;color:#fff;background:' + info.col + ';padding:1px 8px;border-radius:8px">' + u.code + ': ' + info.label + '</span>' : '')
-      + (u.aiRelated ? '<span style="font-size:10px;color:#f59e0b">AI관련</span>' : '')
-      + '</div>'
+      + (u.aiRelated ? '<span style="font-size:10px;color:#f59e0b">AI관련</span>' : '') + '</div>'
       + '<div style="font-size:12px;color:var(--ink2)">' + esc(u.text.slice(0, 80)) + (u.text.length > 80 ? '…' : '') + '</div>'
-      + (u.reason ? '<div style="font-size:11px;color:var(--ink3);margin-top:2px">→ ' + esc(u.reason) + '</div>' : '')
-      + '</div>';
+      + (u.reason ? '<div style="font-size:11px;color:var(--ink3);margin-top:2px">→ ' + esc(u.reason) + '</div>' : '') + '</div>';
   }).join('');
 }
-
 function renderResultSummary() {
-  const el = document.getElementById('result-charts');
-  if (!el) return;
-  const coded = DS.utterances.filter(u => u.code);
-  const total = coded.length;
+  const el = document.getElementById('result-charts'); if (!el) return;
+  const coded = DS.utterances.filter(u => u.code); const total = coded.length;
   if (!total) { el.innerHTML = '<div style="font-size:11px;color:var(--ink3)">코딩 결과가 없습니다</div>'; return; }
   const counts = {};
   coded.forEach(u => counts[u.code] = (counts[u.code] || 0) + 1);
@@ -1987,28 +1876,19 @@ function renderResultSummary() {
     + '<div style="background:#fef3c7;border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:#92400e">' + suAI + '</div><div style="font-size:10px;color:#92400e">SRU-AI</div></div>'
     + '<div style="background:#dcfce7;border-radius:var(--rs);padding:8px;text-align:center"><div style="font-size:18px;font-weight:700;color:#14532d">' + suH + '</div><div style="font-size:10px;color:#14532d">SRU-H</div></div>'
     + '</div>'
-    + Object.entries(cats).map(([cat, cnt]) => {
-      const pct = Math.round(cnt / total * 100);
-      return '<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>' + cat + '</span><span>' + cnt + '회 (' + pct + '%)</span></div><div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--ink);border-radius:3px;width:' + pct + '%"></div></div></div>';
-    }).join('')
+    + Object.entries(cats).map(([cat, cnt]) => { const pct = Math.round(cnt / total * 100); return '<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>' + cat + '</span><span>' + cnt + '회 (' + pct + '%)</span></div><div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--ink);border-radius:3px;width:' + pct + '%"></div></div></div>'; }).join('')
     + '<div style="margin-top:8px;font-size:11px;color:var(--ink2);padding-top:8px;border-top:1px solid var(--bd)">AI 재해석 비율: <strong>' + (suAI+suH ? Math.round(suH/(suAI+suH)*100) : 0) + '%</strong></div>';
 }
-
 function exportDiscCSV() {
   if (!DS.utterances.length) { toast('발화 데이터가 없습니다'); return; }
   const H = ['팀이름','순번','발화자','발화내용','KB코드','코드명','범주','이유','AI관련','시간'];
-  const rows = DS.utterances.map((u, i) => {
-    const info = u.code ? KB_CODES[u.code] : null;
-    return [DS.teamName||'', i+1, u.speaker, u.text, u.code||'', info?info.label:'', info?info.cat:'', u.reason||'', u.aiRelated?'Y':'N', u.time];
-  });
+  const rows = DS.utterances.map((u, i) => { const info = u.code ? KB_CODES[u.code] : null; return [DS.teamName||'', i+1, u.speaker, u.text, u.code||'', info?info.label:'', info?info.cat:'', u.reason||'', u.aiRelated?'Y':'N', u.time]; });
   const csv = '\uFEFF' + [H, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = '토의분석_' + (DS.teamName||'팀') + '_' + new Date().toLocaleDateString('ko-KR').replace(/[\s.]/g,'') + '.csv';
-  a.click();
-  toast('📥 토의 CSV 다운로드 완료');
+  a.click(); toast('📥 토의 CSV 다운로드 완료');
 }
-
 </script>
 </body>
 </html>
