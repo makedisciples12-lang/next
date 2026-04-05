@@ -251,48 +251,26 @@ body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--ink)
   try{
     var sheet=SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var d=JSON.parse(e.postData.contents);
-    var name=d['학생이름']||'';
-    if(!name) return ContentService.createTextOutput('error:no name');
-
-    // 헤더가 없으면 첫 행에 생성
     if(sheet.getLastRow()===0){
       sheet.appendRow(['학생이름','주제','제출시각','현재단계',
         '계획글자수','개요글자수','초고글자수','최종글자수','글자변화율',
         '계획AI질문수','개요AI질문수','초고AI질문수','고쳐쓰기AI질문수','총AI질문수',
         '계획AI질문답변','개요AI질문답변','초고AI질문답변','고쳐쓰기AI질문답변',
-        'AI답변최종글유사도','초고최종글유사도',
-        '지식수준','지식수준설명','KL단계별상세',
-        '글질_내용','글질_구조','글질_향상','글질_AI활용','글질_평균',
-        'AI활용반성','계획_주제','계획_목적','계획_독자','계획_핵심주장',
+        'AI답변최종글유사도','초고최종글유사도','지식수준','지식수준설명','KL단계별상세',
+        '글질_내용','글질_구조','글질_향상','글질_AI활용','글질_평균','AI활용반성',
+        '계획_주제','계획_목적','계획_독자','계획_핵심주장',
         '계획_AI메모','계획_추가메모','계획_형식',
-        '개요내용','초고내용','최종글내용',
-        'discTeam','discUttCount','discUttText']);
+        '개요내용','초고내용','최종글내용','discTeam','discUttCount','discUttText']);
     }
-
-    // 같은 이름의 행이 있으면 덮어쓰기, 없으면 새 행 추가
-    var data=sheet.getDataRange().getValues();
-    var rowIdx=-1;
-    for(var i=1;i<data.length;i++){
-      if(data[i][0]===name){rowIdx=i+1;break;}
-    }
-
-    var row=[name,d['주제'],d['제출시각'],d['현재단계']||'',
+    sheet.appendRow([d['학생이름'],d['주제'],d['제출시각'],d['현재단계'],
       d['계획글자수'],d['개요글자수'],d['초고글자수'],d['최종글자수'],d['글자변화율'],
       d['계획AI질문수'],d['개요AI질문수'],d['초고AI질문수'],d['고쳐쓰기AI질문수'],d['총AI질문수'],
       d['계획AI질문답변'],d['개요AI질문답변'],d['초고AI질문답변'],d['고쳐쓰기AI질문답변'],
-      d['AI답변최종글유사도'],d['초고최종글유사도'],
-      d['지식수준'],d['지식수준설명'],d['KL단계별상세'],
-      d['글질_내용'],d['글질_구조'],d['글질_향상'],d['글질_AI활용'],d['글질_평균'],
-      d['AI활용반성'],d['계획_주제'],d['계획_목적'],d['계획_독자'],d['계획_핵심주장'],
+      d['AI답변최종글유사도'],d['초고최종글유사도'],d['지식수준'],d['지식수준설명'],d['KL단계별상세'],
+      d['글질_내용'],d['글질_구조'],d['글질_향상'],d['글질_AI활용'],d['글질_평균'],d['AI활용반성'],
+      d['계획_주제'],d['계획_목적'],d['계획_독자'],d['계획_핵심주장'],
       d['계획_AI메모'],d['계획_추가메모'],d['계획_형식'],
-      d['개요내용'],d['초고내용'],d['최종글내용'],
-      d['discTeam'],d['discUttCount'],d['discUttText']];
-
-    if(rowIdx>0){
-      sheet.getRange(rowIdx,1,1,row.length).setValues([row]);
-    } else {
-      sheet.appendRow(row);
-    }
+      d['개요내용'],d['초고내용'],d['최종글내용'],d['discTeam'],d['discUttCount'],d['discUttText']]);
     return ContentService.createTextOutput('ok');
   }catch(err){
     return ContentService.createTextOutput('error:'+err.message);
@@ -454,7 +432,8 @@ function doGet(e){return ContentService.createTextOutput('ok')}</div>
           <div class="pdot" id="dot-draft"></div><div class="pdot" id="dot-revise"></div>
         </div>
         <div class="bar-r">
-          <button class="btn-nav" id="btn-prev" onclick="prevStage()" style="display:none">← 이전</button>
+          <button class="btn-nav" id="btn-prev" onclick="prevStage()" style="display:none">이전</button>
+          <button class="btn-nav" id="btn-stage-submit" onclick="submitStage()" style="display:none;background:var(--amb);color:#fff;border-color:var(--amb);font-size:12px">📤 이 단계 제출</button>
           <button class="btn-nav btn-nxt" id="btn-next" onclick="nextStage()">다음 단계 →</button>
           <button class="btn-nav btn-sub" id="btn-sub" onclick="submitFinal()">📤 최종 제출</button>
         </div>
@@ -497,14 +476,13 @@ const S={
 };
 
 // ═══════════════════════════════════════════════════
-// 자동저장 시스템 (새로고침 복구 + Sheets 실시간 전송)
+// 자동저장 시스템 (localStorage만 — Sheets는 단계 제출 버튼으로)
 // ═══════════════════════════════════════════════════
 
 let _autoSaveTimer=null;
-let _sheetsTimer=null;   // Sheets 전송은 더 느리게 (3초 debounce)
 const SAVE_KEY='wp_student_draft';
 
-// 학생 입력 전체를 localStorage에 저장하고 Sheets에도 전송
+// localStorage에만 저장 (새로고침 복구용)
 function autoSave(){
   if(!S.name)return;
   clearTimeout(_autoSaveTimer);
@@ -530,29 +508,37 @@ function autoSave(){
       done:S.done,
       qualStars:S.qualStars
     };
-    // ① localStorage 저장 (새로고침 복구용)
     localStorage.setItem(SAVE_KEY+'_'+S.name,JSON.stringify(data));
-    // ② 로컬 연구 패널 업데이트
     updateSub({research:S.research,done:S.done,qualStars:S.qualStars,
       planData:{topic:data.plan.topic,purpose:data.plan.purpose,reader:data.plan.reader,idea:data.plan.idea,ref:data.plan.ref,format:data.plan.format},
       draftText:data.draft,finalText:data.revise||data.draft,
       reflection:data.reflection
     });
     showAutosaveBadge('local');
-    // ③ Sheets 전송 (3초 debounce — 너무 자주 보내지 않도록)
-    clearTimeout(_sheetsTimer);
-    _sheetsTimer=setTimeout(()=>sendProgressToSheets(data),3000);
   },600);
 }
 
-// Sheets에 진행 중 데이터 전송 (덮어쓰기 방식)
-async function sendProgressToSheets(data){
-  let fUrl=S.formsUrl||localStorage.getItem('wp_forms')||'';
-  if(!fUrl){
-    try{const fr=await window.storage.get('formsUrl_'+S.classCode,true);if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;localStorage.setItem('wp_forms',fUrl);}}catch(e){}
-  }
-  if(!fUrl)return; // URL 없으면 조용히 스킵
+// 단계별 제출 버튼 — 해당 단계 스냅샷을 Sheets에 행 추가
+async function submitStage(){
+  const stageName=SN[S.stage]||S.stage;
+  const btn=document.getElementById('btn-stage-submit');
+  if(btn){btn.disabled=true;btn.textContent='전송 중…';}
+  STAGES.forEach(s=>trackC(s));
 
+  const planData={
+    topic:document.getElementById('p-topic')?.value||'',
+    purpose:document.getElementById('p-purpose')?.value||'',
+    reader:document.getElementById('p-reader')?.value||'',
+    idea:document.getElementById('p-idea')?.value||'',
+    ref:document.getElementById('p-ref')?.value||'',
+    memo2:document.getElementById('p-memo2')?.value||'',
+    format:document.getElementById('p-format')?.value||''
+  };
+  const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
+  const olLabels=['서론','본론1','본론2','본론3','결론'];
+  const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
+  const draftText=document.getElementById('draft-ta')?.value||'';
+  const reviseText=document.getElementById('revise-ta')?.value||'';
   const q=STAGES.map(s=>S.research[s]?.aiQA?.length||0);
   const qaByStage=STAGES.reduce((o,s)=>{
     o[s]=(S.research[s].aiQA||[]).map(x=>'Q:'+x.q+'|A:'+(x.a||'').slice(0,100)).join(';;');
@@ -560,52 +546,52 @@ async function sendProgressToSheets(data){
   },{});
   const dc=S.research.draft.chars||0,rc=S.research.revise.chars||0;
   const chg=dc>0?Math.round((rc-dc)/dc*100)+'%':'0%';
-  const qs=S.qualStars||{};
-  const qavg=Object.values(qs).filter(v=>v>0).length
-    ?Math.round(Object.values(qs).reduce((a,b)=>a+b,0)/4*10)/10:'';
-  const olTas=[...document.querySelectorAll('#ol-wrap .ol-ta')];
-  const olLabels=['서론','본론1','본론2','본론3','결론'];
-  const outlineText=olTas.map((ta,i)=>(olLabels[i]||'항목'+(i+1))+': '+ta.value.trim()).filter(t=>t.split(': ')[1]).join(' / ');
 
   const payload={
-    '학생이름':S.name,
-    '주제':S.topic,
-    '제출시각':'진행중 — '+new Date().toLocaleString('ko-KR'),
-    '현재단계':SN[S.stage]||S.stage,
-    '계획글자수':S.research.plan.chars||0,
-    '개요글자수':S.research.outline.chars||0,
-    '초고글자수':dc,
-    '최종글자수':rc,
-    '글자변화율':chg,
+    '학생이름':S.name,'주제':S.topic,
+    '제출시각':new Date().toLocaleString('ko-KR'),
+    '현재단계':stageName,
+    '계획글자수':S.research.plan.chars||0,'개요글자수':S.research.outline.chars||0,
+    '초고글자수':dc,'최종글자수':rc,'글자변화율':chg,
     '계획AI질문수':q[0],'개요AI질문수':q[1],'초고AI질문수':q[2],'고쳐쓰기AI질문수':q[3],
     '총AI질문수':q.reduce((a,b)=>a+b,0),
     '계획AI질문답변':qaByStage.plan.slice(0,600),
     '개요AI질문답변':qaByStage.outline.slice(0,600),
     '초고AI질문답변':qaByStage.draft.slice(0,600),
     '고쳐쓰기AI질문답변':qaByStage.revise.slice(0,600),
-    'AI답변최종글유사도':'미제출',
-    '초고최종글유사도':'미제출',
-    '지식수준':'미제출','지식수준설명':'','KL단계별상세':'',
-    '글질_내용':qs.content||0,'글질_구조':qs.structure||0,
-    '글질_향상':qs.improvement||0,'글질_AI활용':qs.ai_utility||0,'글질_평균':qavg,
-    'AI활용반성':data.reflection||'',
-    '계획_주제':data.plan.topic,'계획_목적':data.plan.purpose,
-    '계획_독자':data.plan.reader,'계획_핵심주장':data.plan.idea,
-    '계획_AI메모':(data.plan.ref||'').slice(0,500),
-    '계획_추가메모':(data.plan.memo2||'').slice(0,300),
-    '계획_형식':data.plan.format,
+    'AI답변최종글유사도':'','초고최종글유사도':'',
+    '지식수준':'','지식수준설명':'','KL단계별상세':'',
+    '글질_내용':S.qualStars.content||0,'글질_구조':S.qualStars.structure||0,
+    '글질_향상':S.qualStars.improvement||0,'글질_AI활용':S.qualStars.ai_utility||0,'글질_평균':'',
+    'AI활용반성':document.getElementById('ai-reflection')?.value||'',
+    '계획_주제':planData.topic,'계획_목적':planData.purpose,
+    '계획_독자':planData.reader,'계획_핵심주장':planData.idea,
+    '계획_AI메모':planData.ref.slice(0,500),'계획_추가메모':planData.memo2.slice(0,300),
+    '계획_형식':planData.format,
     '개요내용':outlineText.slice(0,800),
-    '초고내용':data.draft||'',
-    '최종글내용':data.revise||data.draft||'',
-    'discTeam':'','discUttCount':0,'discUttText':'',
-    // 덮어쓰기 신호 — Apps Script가 이 키로 기존 행을 찾아 업데이트
-    '_mode':'upsert'
+    '초고내용':draftText,'최종글내용':reviseText||draftText,
+    'discTeam':DS.teamName||'','discUttCount':DS.utterances?.length||0,'discUttText':''
   };
+
+  let fUrl=S.formsUrl||localStorage.getItem('wp_forms')||'';
+  if(!fUrl){
+    try{const fr=await window.storage.get('formsUrl_'+S.classCode,true);if(fr&&fr.value){fUrl=fr.value;S.formsUrl=fUrl;}}catch(e){}
+  }
+  if(!fUrl){
+    toast('⚠️ Google Sheets URL이 설정되지 않았습니다. 교사에게 문의하세요.');
+    if(btn){btn.disabled=false;btn.textContent='📤 이 단계 제출';}
+    return;
+  }
   try{
-    // no-cors: 응답을 못 읽지만 전송은 됨
-    fetch(fUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
-    showAutosaveBadge('sheets');
-  }catch(e){/* 네트워크 오류 무시 — 다음 저장에 재시도 */}
+    await fetch(fUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    S.done[S.stage]=true;
+    updateDots();
+    if(btn){btn.textContent='✅ 제출됨';btn.style.background='var(--grn)';btn.disabled=true;}
+    toast('✅ '+stageName+' 제출 완료! Sheets에 저장됐어요.');
+  }catch(e){
+    toast('❌ 전송 실패: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='📤 이 단계 제출';}
+  }
 }
 
 function showAutosaveBadge(mode){
@@ -926,6 +912,19 @@ function goStage(s){
   if(s==='draft')updateOLPreview();
   renderAI();updateBottom();updateSub({stage:s});
   autoSave();
+  // 단계 이동 시 제출 버튼 상태 리셋 (이미 제출한 단계면 완료 표시)
+  const stageBtn=document.getElementById('btn-stage-submit');
+  if(stageBtn){
+    if(S.done[s]){
+      stageBtn.textContent='✅ 제출됨';
+      stageBtn.style.background='var(--grn)';
+      stageBtn.disabled=true;
+    } else {
+      stageBtn.textContent='📤 이 단계 제출';
+      stageBtn.style.background='var(--amb)';
+      stageBtn.disabled=false;
+    }
+  }
 }
 function nextStage(){const i=STAGES.indexOf(S.stage);if(i<STAGES.length-1){S.done[S.stage]=true;goStage(STAGES[i+1])}updateDots()}
 function prevStage(){const i=STAGES.indexOf(S.stage);if(i>0)goStage(STAGES[i-1])}
@@ -934,6 +933,9 @@ function updateBottom(){
   document.getElementById('btn-prev').style.display=i>0?'':'none';
   document.getElementById('btn-next').style.display=isLast?'none':'';
   document.getElementById('btn-sub').style.display=isLast?'inline-flex':'none';
+  // 단계별 제출 버튼: 마지막 단계(고쳐쓰기) 제외하고 표시
+  const stageBtn=document.getElementById('btn-stage-submit');
+  if(stageBtn) stageBtn.style.display=isLast?'none':'inline-flex';
   updateDots();
 }
 function updateDots(){
