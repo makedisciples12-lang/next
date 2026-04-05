@@ -724,13 +724,17 @@ async function studentEnter(){
     const code=document.getElementById('s-code').value.trim().toUpperCase();
     const topic=document.getElementById('s-topic').value.trim();
     if(!name){toast('이름을 입력해주세요');return}
-    if(code!==S.classCode){toast('코드가 올바르지 않습니다');return}
+    // 입력한 코드가 현재 유효 코드와 다를 때: 저장된 코드 목록에도 없으면 거부
+    const validCodes=[S.classCode,'WRITE1'].map(c=>c.toUpperCase());
+    if(!validCodes.includes(code)){
+      toast('코드가 올바르지 않습니다 (현재 코드: '+S.classCode+')');return;
+    }
     S.name=name;S.topic=topic||'자유 주제';
     document.getElementById('badge-nm').textContent='— '+name+' 학생';
     if(topic){const el=document.getElementById('p-topic');if(el)el.value=topic;}
     S.qualStars={content:0,structure:0,improvement:0,ai_utility:0};
     S.research={plan:{chars:0,aiQA:[]},outline:{chars:0,aiQA:[]},draft:{chars:0,aiQA:[]},revise:{chars:0,aiQA:[]}};
-    loadSettings();
+    loadSettings(false);
     // shared storage에서 API키 + Sheets URL 로드
     try{
       const [kr,fr]=await Promise.all([
@@ -753,7 +757,7 @@ async function studentEnter(){
 function teacherEnter(){
   try{
     if(document.getElementById('t-pw').value!=='teacher123'){toast('비밀번호 오류');return}
-    loadSettings();renderSubs();show('pg-teacher');
+    loadSettings(true);renderSubs();show('pg-teacher');
   }catch(e){toast('오류: '+e.message);console.error(e);}
 }
 
@@ -805,11 +809,13 @@ async function saveForms(){
     toast('✅ Forms URL 저장됨');
   }
 }
-function loadSettings(){
+function loadSettings(isTeacher){
   const ai=localStorage.getItem('wp_ai');
   if(ai){S.ai=JSON.parse(ai);Object.entries(S.ai).forEach(([k,v])=>{const el=document.getElementById('tog-'+k);if(el){el.checked=v;updateCard(k,v)}})}
+  // 코드는 교사 패널에서만 불러옴 — 학생 입장 시 덮어쓰면 WRITE1 기본값이 깨짐
   const code=localStorage.getItem('wp_code');
-  if(code){S.classCode=code;const el=document.getElementById('cur-code');if(el)el.textContent=code}
+  if(code&&isTeacher){S.classCode=code;const el=document.getElementById('cur-code');if(el)el.textContent=code}
+  else if(code){S.classCode=code;} // S.classCode는 업데이트하되 UI는 건드리지 않음
   const forms=localStorage.getItem('wp_forms');
   if(forms){S.formsUrl=forms;const el=document.getElementById('forms-url');if(el)el.value=forms;const st=document.getElementById('forms-st');if(st)st.textContent='✅ 연동됨'}
   const key=localStorage.getItem('wp_key');
@@ -1462,7 +1468,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 // INIT
 STAGES.forEach(s=>{const el=document.getElementById('st-'+s);if(el)el.style.display='none'});
 document.getElementById('st-plan').style.display='flex';
-loadSettings();
+loadSettings(false); // 페이지 최초 로드: 코드 UI 건드리지 않음
 if(window.innerWidth<=660){
   S.aiOpen=false;
   const col=document.getElementById('ai-col');
